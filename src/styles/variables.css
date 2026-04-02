@@ -1,0 +1,93 @@
+:root {
+  /* Design Tokens - Swiss Aesthetic */
+
+  /* Usage: Monochromatic Base */
+  --color-bg-body: #F5F5F5;
+  /* Background */
+  --color-bg-surface: #FFFFFF;
+  /* White */
+  --color-bg-subtle: #E0E0E0;
+  /* Grey Light */
+  --color-bg-active: #E3F2FD;
+  /* Primary Light */
+
+  /* Brand Colors */
+  --color-primary: #1565C0;
+  /* Primary Blue */
+  --color-primary-light: #E3F2FD;
+  /* Primary Light */
+
+  /* Text & Icons */
+  --color-text-primary: #212121;
+  --color-text-secondary: #757575;
+  --color-text-tertiary: #BDBDBD;
+  /* Grey */
+
+  /* Borders & Separation */
+  --border-color: #E0E0E0;
+  /* Grey Light */
+  --border-width: 1px;
+  --border-radius: 12px;
+
+  /* Typography - Clean Sans-Serif */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --font-weight-heavy: 700;
+
+  /* Spacing - Generous Negative Space */
+  --spacing-xs: 0.5rem;
+  /* 8px */
+  --spacing-sm: 1rem;
+  /* 16px */
+  --spacing-md: 1.5rem;
+  /* 24px */
+  --spacing-lg: 2.5rem;
+  /* 40px */
+  --spacing-xl: 4rem;
+  /* 64px */
+
+  /* Status Colors */
+  --color-status-normal: #4CAF50;
+  /* Normal (Green) */
+  --color-status-normal-light: #E8F5E9;
+  --color-status-warning: #FF9800;
+  /* Warning (Orange) */
+  --color-status-warning-light: #FFF3E0;
+  --color-status-critical: #F44336;
+  /* Critical (Red) */
+  --color-status-critical-light: #FFEBEE;
+
+  --color-status-active: #4CAF50;
+  --color-status-alert: #F44336;
+
+  /* Shadows - Minimal/None */
+  --shadow-none: none;
+}
+
+body {
+  font-family: var(--font-family-base);
+  background-color: var(--color-bg-body);
+  color: var(--color-text-primary);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reset basics */
+* {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: var(--font-weight-heavy);
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  /* Tighter tracking for headlines */
+}

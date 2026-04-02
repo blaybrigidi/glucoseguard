@@ -1,0 +1,22 @@
+{
+    "rules": {
+        "users": {
+            "$uid": {
+                ".read": "auth != null && auth.uid == $uid",
+                ".write": "auth != null && auth.uid == $uid"
+            }
+        },
+        "patient_data": {
+            "$patientId": {
+                ".read": "auth != null && (auth.uid == $patientId || root.child('users/' + auth.uid + '/role').val() == 'clinician')",
+                ".write": "auth != null && auth.uid == $patientId"
+            }
+        },
+        "alerts": {
+            "$patientId": {
+                ".read": "auth != null && (auth.uid == $patientId || root.child('users/' + auth.uid + '/role').val() == 'clinician')",
+                ".write": false
+            }
+        }
+    }
+}

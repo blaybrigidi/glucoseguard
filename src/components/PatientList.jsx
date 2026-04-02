@@ -1,0 +1,242 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { api } from '../services/api';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => {
+    const [patients, setPatients] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPatients = async () => {
+            try {
+                const response = await api.getPatients();
+                // Map backend data to frontend structure
+                const mappedPatients = response.map(p => ({
+                    id: p.id,
+                    name: p.name || 'Unknown',
+                    hr: p.lastVitalsConfig?.heartRate || '--',
+                    hrTrend: { dir: 'stable', val: 0 },
+                    temp: '--',
+                    status: p.status || 'Normal',
+                    lastUpdate: p.updatedAt ? new Date(p.updatedAt).getTime() : Date.now(),
+                    avatar: p.name ? p.name.split(' ').map(n => n[0]).join('') : '??'
+                }));
+                setPatients(mappedPatients);
+            } catch (error) {
+                console.error("Error fetching patients:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPatients();
+    }, []);
+
+    const filteredPatients = useMemo(() => {
+        let result = [...patients];
+
+        // 1. Filter
+        if (searchQuery) {
+            const lowerQuery = searchQuery.toLowerCase();
+            result = result.filter(p => p.name.toLowerCase().includes(lowerQuery));
+        }
+        if (statusFilter !== 'All') {
+            result = result.filter(p => p.status === statusFilter);
+        }
+
+        // 2. Sort: Critical -> Warning -> Normal
+        const statusPriority = { 'Critical': 0, 'Warning': 1, 'Normal': 2 };
+        result.sort((a, b) => (statusPriority[a.status] ?? 2) - (statusPriority[b.status] ?? 2));
+
+        return result;
+    }, [patients, searchQuery, statusFilter]);
+
+    if (loading) {
+        return <PatientListSkeleton />;
+    }
+
+    return (
+        <div className="w-full rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+            <Table>
+                <TableHeader className="bg-muted/50">
+                    <TableRow>
+                        <TableHead className="w-[30%]">PATIENT NAME</TableHead>
+                        <TableHead>HEART RATE</TableHead>
+                        <TableHead>TEMP</TableHead>
+                        <TableHead>STATUS</TableHead>
+                        <TableHead>LAST UPDATE</TableHead>
+                        <TableHead>ACTIONS</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {filteredPatients.map((patient) => (
+                        <PatientRow
+                            key={patient.id}
+                            initialData={patient}
+                            onNavigate={onNavigate}
+                        />
+                    ))}
+                </TableBody>
+            </Table>
+            {filteredPatients.length === 0 && (
+                <div className="p-12 text-center text-muted-foreground">
+                    No patients found matching your search.
+                </div>
+            )}
+        </div>
+    );
+};
+
+const PatientRow = ({ initialData, onNavigate }) => {
+    const [data, setData] = useState(initialData);
+
+    useEffect(() => {
+        // Subscribe to real-time updates for this patient
+        const unsubscribe = api.subscribeToVitals(initialData.id, (reading) => {
+            if (!reading) return;
+
+            // Map ML risk to status
+            // risk: "stable" | "warning" | "high_risk"
+            // status: "Normal" | "Warning" | "Critical"
+            let newStatus = 'Normal';
+            if (reading.instability_risk === 'warning') newStatus = 'Warning';
+            if (reading.instability_risk === 'high_risk') newStatus = 'Critical';
+
+            setData(prev => ({
+                ...prev,
+                hr: reading.hr || prev.hr,
+                temp: reading.temp || prev.temp,
+                status: newStatus,
+                lastUpdate: new Date(reading.timestamp).getTime()
+            }));
+        });
+
+        return () => unsubscribe();
+    }, [initialData.id]);
+
+    const freshness = getFreshnessStatus(data.lastUpdate);
+    const isCritical = data.status === 'Critical';
+
+    return (
+        <TableRow
+            className={`
+                border-b transition-colors hover:bg-muted/50 cursor-pointer
+                ${isCritical ? 'bg-red-50/50 hover:bg-red-50/80 border-l-4 border-l-red-500' : 'border-l-4 border-l-transparent'}
+            `}
+            onClick={() => onNavigate('patient-detail', data.id)}
+        >
+            <TableCell>
+                <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground text-xs">
+                        {data.avatar}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-foreground">{data.name}</span>
+                        <span className="text-xs text-muted-foreground">ID: {1000 + String(data.id)}</span>
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className="font-medium text-foreground">{data.hr} bpm</div>
+            </TableCell>
+            <TableCell>
+                <span className="font-medium">{data.temp}°C</span>
+            </TableCell>
+            <TableCell>
+                <StatusBadge status={data.status} />
+            </TableCell>
+            <TableCell>
+                {freshness.isOffline ? (
+                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        OFFLINE
+                    </span>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <div className={`h-1.5 w-1.5 rounded-full ${freshness.dot}`} />
+                        <span className={`text-xs ${freshness.color}`}>{freshness.text}</span>
+                    </div>
+                )}
+            </TableCell>
+            <TableCell>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => { e.stopPropagation(); onNavigate('patient-detail', data.id); }}
+                >
+                    Details
+                </Button>
+            </TableCell>
+        </TableRow>
+    );
+};
+
+const getFreshnessStatus = (timestamp) => {
+    const diff = Date.now() - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 2) return { text: 'Just now', color: 'text-green-600', dot: 'bg-green-600' };
+    if (minutes < 60) return { text: `${minutes} min ago`, color: 'text-yellow-600', dot: 'bg-yellow-600' };
+    return { text: 'Offline', color: 'text-red-500', isOffline: true };
+};
+
+const StatusBadge = ({ status }) => {
+    let classes = "bg-green-100 text-green-700 hover:bg-green-100/80";
+    if (status === 'Warning') classes = "bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80";
+    if (status === 'Critical') classes = "bg-red-100 text-red-700 border border-red-200 hover:bg-red-100/80";
+
+    return (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${classes}`}>
+            {status === 'Critical' && <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-red-600" />}
+            {status}
+        </span>
+    );
+};
+
+const PatientListSkeleton = () => (
+    <div className="w-full rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+        <Table>
+            <TableHeader className="bg-muted/50">
+                <TableRow>
+                    <TableHead className="w-[30%]">PATIENT NAME</TableHead>
+                    <TableHead>HEART RATE</TableHead>
+                    <TableHead>TEMP</TableHead>
+                    <TableHead>STATUS</TableHead>
+                    <TableHead>LAST UPDATE</TableHead>
+                    <TableHead>ACTIONS</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {[...Array(5)].map((_, i) => (
+                    <TableRow key={i} className="border-b">
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                                <Skeleton className="h-9 w-9 rounded-full" />
+                                <div className="flex flex-col gap-1">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-3 w-20" />
+                                </div>
+                            </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </div>
+);
+
+export default PatientList;
+
