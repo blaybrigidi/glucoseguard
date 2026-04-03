@@ -38,7 +38,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const register = async (email: string, password: string, displayName: string, phoneNumber: string) => {
-        const response = await fetch('/api/auth/register', {
+        const base = import.meta.env.VITE_API_URL
+            ? `${import.meta.env.VITE_API_URL}/api`
+            : '/api';
+        const response = await fetch(`${base}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, displayName, phoneNumber })

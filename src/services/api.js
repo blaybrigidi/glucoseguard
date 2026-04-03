@@ -2,7 +2,9 @@ import { auth } from '../config/firebase';
 import { ref, query, orderByKey, limitToLast, get, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : '/api';
 
 const coerceNumber = (value) => {
     if (value === null || value === undefined) return value;
