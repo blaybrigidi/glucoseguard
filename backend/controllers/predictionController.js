@@ -23,6 +23,9 @@ function validatePredictionBody(body) {
     if (!body.latest_reading || typeof body.latest_reading !== 'string') {
         return 'Invalid prediction payload: latest_reading is required (ISO string)';
     }
+    if (!body.patient_id || typeof body.patient_id !== 'string') {
+        return 'Invalid prediction payload: patient_id is required (string)';
+    }
     return null;
 }
 

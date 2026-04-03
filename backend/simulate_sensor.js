@@ -1,11 +1,11 @@
 const { rtdb, db } = require('./config/firebase');
 const { logVitalSign } = require('./services/vitalsService');
 
-let patientId = null;
+let patientId = "PIIUSyEd7VaM1H64vpOmZXt2ZTz1";
 
 const getPatientId = async () => {
     try {
-        const snapshot = await db.collection('patients').limit(1).get();
+        const snapshot = await db.collection('users').limit(1).get();
         if (snapshot.empty) {
             console.error("No patients found in Firestore. Run 'node seedData.js' first.");
             process.exit(1);

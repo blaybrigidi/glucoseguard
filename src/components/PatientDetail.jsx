@@ -5,9 +5,10 @@ import { api } from '../services/api';
 import { generatePatientReport } from '../services/pdfService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, FileText, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Activity, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from 'sonner';
 
 const RiskStatusCard = ({ risk, instabilityProbability }) => {
     const getRiskConfig = (riskLevel) => {
@@ -47,6 +48,7 @@ const PatientDetail = ({ onNavigate, patientId }) => {
     const [patient, setPatient] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
 
     const getVitalStatus = (type, value) => {
         if (!value || value === '--') return 'Unknown';
@@ -56,10 +58,15 @@ const PatientDetail = ({ onNavigate, patientId }) => {
 
     const handleDownloadPDF = async () => {
         if (!patient) return;
+        setPdfLoading(true);
         try {
             await generatePatientReport(patient.id);
+            toast.success('PDF report downloaded');
         } catch (err) {
             console.error("Failed to generate PDF:", err);
+            toast.error(`Failed to generate report: ${err.message}`);
+        } finally {
+            setPdfLoading(false);
         }
     };
 
@@ -182,9 +189,11 @@ const PatientDetail = ({ onNavigate, patientId }) => {
                         )}
                     </div>
                 </div>
-                <Button className="rounded-full shadow-lg" size="lg" onClick={handleDownloadPDF}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Generate PDF Report
+                <Button className="rounded-full shadow-lg" size="lg" onClick={handleDownloadPDF} disabled={pdfLoading}>
+                    {pdfLoading
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <FileText className="mr-2 h-4 w-4" />}
+                    {pdfLoading ? 'Generating...' : 'Generate PDF Report'}
                 </Button>
             </header>
 
