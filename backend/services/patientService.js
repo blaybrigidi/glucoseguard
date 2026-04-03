@@ -20,6 +20,8 @@ const createPatient = async (patientData, doctorId) => {
     try {
         const newPatient = {
             ...patientData,
+            name: `${patientData.firstName} ${patientData.lastName}`.trim(),
+            role: 'patient',
             assignedDoctor: doctorId,
             createdAt: new Date().toISOString(),
             status: patientData.status || 'Normal'
