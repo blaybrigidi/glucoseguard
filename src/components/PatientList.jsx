@@ -11,8 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Clock } from 'lucide-react';
 
-const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => {
+const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All', activeTab = 'accepted' }) => {
     const [patients, setPatients] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -20,7 +21,6 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
         const fetchPatients = async () => {
             try {
                 const response = await api.getPatients();
-                // Map backend data to frontend structure
                 const mappedPatients = response.map(p => ({
                     id: p.id,
                     name: p.name || 'Unknown',
@@ -28,6 +28,7 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
                     hrTrend: { dir: 'stable', val: 0 },
                     temp: '--',
                     status: p.status || 'Normal',
+                    assignmentStatus: p.assignmentStatus || 'accepted',
                     lastUpdate: p.updatedAt ? new Date(p.updatedAt).getTime() : Date.now(),
                     avatar: p.name ? p.name.split(' ').map(n => n[0]).join('') : '??'
                 }));
@@ -42,10 +43,24 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
         fetchPatients();
     }, []);
 
-    const filteredPatients = useMemo(() => {
-        let result = [...patients];
+    const { acceptedPatients, pendingPatients } = useMemo(() => {
+        const accepted = [];
+        const pending = [];
 
-        // 1. Filter
+        patients.forEach(p => {
+            if (p.assignmentStatus === 'pending') {
+                pending.push(p);
+            } else {
+                accepted.push(p);
+            }
+        });
+
+        return { acceptedPatients: accepted, pendingPatients: pending };
+    }, [patients]);
+
+    const filteredAccepted = useMemo(() => {
+        let result = [...acceptedPatients];
+
         if (searchQuery) {
             const lowerQuery = searchQuery.toLowerCase();
             result = result.filter(p => p.name.toLowerCase().includes(lowerQuery));
@@ -54,15 +69,47 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
             result = result.filter(p => p.status === statusFilter);
         }
 
-        // 2. Sort: Critical -> Warning -> Normal
         const statusPriority = { 'Critical': 0, 'Warning': 1, 'Normal': 2 };
         result.sort((a, b) => (statusPriority[a.status] ?? 2) - (statusPriority[b.status] ?? 2));
 
         return result;
-    }, [patients, searchQuery, statusFilter]);
+    }, [acceptedPatients, searchQuery, statusFilter]);
+
+    const filteredPending = useMemo(() => {
+        if (!searchQuery) return pendingPatients;
+        const lowerQuery = searchQuery.toLowerCase();
+        return pendingPatients.filter(p => p.name.toLowerCase().includes(lowerQuery));
+    }, [pendingPatients, searchQuery]);
 
     if (loading) {
         return <PatientListSkeleton />;
+    }
+
+    if (activeTab === 'pending') {
+        return (
+            <div className="w-full rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+                <Table>
+                    <TableHeader className="bg-muted/50">
+                        <TableRow>
+                            <TableHead className="w-[40%]">PATIENT NAME</TableHead>
+                            <TableHead>STATUS</TableHead>
+                            <TableHead>REQUESTED</TableHead>
+                            <TableHead>ASSIGNMENT</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredPending.map((patient) => (
+                            <PendingPatientRow key={patient.id} patient={patient} />
+                        ))}
+                    </TableBody>
+                </Table>
+                {filteredPending.length === 0 && (
+                    <div className="p-12 text-center text-muted-foreground">
+                        No pending assignment requests.
+                    </div>
+                )}
+            </div>
+        );
     }
 
     return (
@@ -79,7 +126,7 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredPatients.map((patient) => (
+                    {filteredAccepted.map((patient) => (
                         <PatientRow
                             key={patient.id}
                             initialData={patient}
@@ -88,7 +135,7 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
                     ))}
                 </TableBody>
             </Table>
-            {filteredPatients.length === 0 && (
+            {filteredAccepted.length === 0 && (
                 <div className="p-12 text-center text-muted-foreground">
                     No patients found matching your search.
                 </div>
@@ -97,17 +144,47 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All' }) => 
     );
 };
 
+const PendingPatientRow = ({ patient }) => {
+    return (
+        <TableRow className="border-b border-l-4 border-l-yellow-400 bg-yellow-50/30">
+            <TableCell>
+                <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground text-xs">
+                        {patient.avatar}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-foreground">{patient.name}</span>
+                        <span className="text-xs text-muted-foreground">ID: {1000 + String(patient.id)}</span>
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                    Unavailable
+                </span>
+            </TableCell>
+            <TableCell>
+                <span className="text-xs text-muted-foreground">
+                    {patient.lastUpdate ? new Date(patient.lastUpdate).toLocaleDateString() : '—'}
+                </span>
+            </TableCell>
+            <TableCell>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    <Clock size={11} />
+                    Awaiting patient confirmation
+                </span>
+            </TableCell>
+        </TableRow>
+    );
+};
+
 const PatientRow = ({ initialData, onNavigate }) => {
     const [data, setData] = useState(initialData);
 
     useEffect(() => {
-        // Subscribe to real-time updates for this patient
         const unsubscribe = api.subscribeToVitals(initialData.id, (reading) => {
             if (!reading) return;
 
-            // Map ML risk to status
-            // risk: "stable" | "warning" | "high_risk"
-            // status: "Normal" | "Warning" | "Critical"
             let newStatus = 'Normal';
             if (reading.instability_risk === 'warning') newStatus = 'Warning';
             if (reading.instability_risk === 'high_risk') newStatus = 'Critical';
@@ -239,4 +316,3 @@ const PatientListSkeleton = () => (
 );
 
 export default PatientList;
-

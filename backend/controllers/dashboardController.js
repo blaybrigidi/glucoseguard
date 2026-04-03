@@ -17,7 +17,7 @@ const getDashboardStats = async (req, res, next) => {
 // @access  Public
 const getRecentActivity = async (req, res, next) => {
     try {
-        const activity = await dashboardService.fetchActivityLog();
+        const activity = await dashboardService.fetchActivityLog(req.user.uid);
         res.status(200).json(activity);
     } catch (error) {
         next(error);
@@ -26,7 +26,7 @@ const getRecentActivity = async (req, res, next) => {
 
 const getAlerts = async (req, res, next) => {
     try {
-        const alerts = await dashboardService.fetchUnreadAlerts();
+        const alerts = await dashboardService.fetchUnreadAlerts(req.user.uid);
         res.json(alerts);
     } catch (error) {
         next(error);
