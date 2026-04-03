@@ -81,8 +81,8 @@ function LeftPanel() {
                     {/* Fake vitals */}
                     {[
                         { label: 'Heart Rate', value: '74 bpm', color: '#F48FB1' },
-                        { label: 'SpO₂',       value: '98%',    color: '#90CAF9' },
                         { label: 'Temperature', value: '36.8°C', color: '#A5D6A7' },
+                        { label: 'HRV (RMSSD)', value: '42 ms',  color: '#CE93D8' },
                     ].map(({ label, value, color }) => (
                         <div key={label} style={{
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',

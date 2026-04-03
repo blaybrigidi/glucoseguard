@@ -7,30 +7,12 @@ const {
     updatePatient,
     deletePatient
 } = require('../controllers/patientController');
+const { protect } = require('../middleware/authMiddleware');
 
-// @desc    Get all patients
-// @route   GET /api/patients
-// @access  Public
-router.get('/', getPatients);
-
-// @desc    Register a new patient
-// @route   POST /api/patients
-// @access  Public
-router.post('/', createPatient);
-
-// @desc    Get patient by ID
-// @route   GET /api/patients/:id
-// @access  Public
-router.get('/:id', getPatientById);
-
-// @desc    Update patient details
-// @route   PUT /api/patients/:id
-// @access  Public
-router.put('/:id', updatePatient);
-
-// @desc    Delete patient
-// @route   DELETE /api/patients/:id
-// @access  Public
-router.delete('/:id', deletePatient);
+router.get('/', protect, getPatients);
+router.post('/', protect, createPatient);
+router.get('/:id', protect, getPatientById);
+router.put('/:id', protect, updatePatient);
+router.delete('/:id', protect, deletePatient);
 
 module.exports = router;

@@ -2,35 +2,25 @@ const { db } = require('../config/firebase');
 
 const findAllPatients = async (filters) => {
     try {
-        let patientsRef = db.collection('users');
-        patientsRef = patientsRef.where('role', '==', 'patient');
+        let query = db.collection('users')
+            .where('role', '==', 'patient')
+            .where('assignedDoctor', '==', filters.doctorId);
 
-        const snapshot = await patientsRef.get();
+        const snapshot = await query.get();
+        if (snapshot.empty) return [];
 
-        // ADD THESE THREE LINES
-        console.log("Snapshot empty?", snapshot.empty);
-        console.log("Snapshot size:", snapshot.size);
-        console.log("Docs:", snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-
-        if (snapshot.empty) {
-            return [];
-        }
-
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error getting patients:", error);
         throw new Error('Database Error: Could not get patients');
     }
 };
 
-const createPatient = async (patientData) => {
+const createPatient = async (patientData, doctorId) => {
     try {
-        // Add timestamp
         const newPatient = {
             ...patientData,
+            assignedDoctor: doctorId,
             createdAt: new Date().toISOString(),
             status: patientData.status || 'Normal'
         };

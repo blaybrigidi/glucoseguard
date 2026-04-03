@@ -5,7 +5,7 @@ const dashboardService = require('../services/dashboardService');
 // @access  Public
 const getDashboardStats = async (req, res, next) => {
     try {
-        const stats = await dashboardService.computeStats();
+        const stats = await dashboardService.computeStats(req.user.uid);
         res.status(200).json(stats);
     } catch (error) {
         next(error);

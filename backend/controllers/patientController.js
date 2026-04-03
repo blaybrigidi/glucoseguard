@@ -7,7 +7,8 @@ const getPatients = async (req, res, next) => {
     try {
         const filters = {
             search: req.query.search,
-            status: req.query.status
+            status: req.query.status,
+            doctorId: req.user.uid,
         };
         const patients = await patientService.findAllPatients(filters);
         res.status(200).json(patients);
@@ -27,7 +28,7 @@ const createPatient = async (req, res, next) => {
             throw new Error('Please include first and last name');
         }
 
-        const patient = await patientService.createPatient(req.body);
+        const patient = await patientService.createPatient(req.body, req.user.uid);
         res.status(201).json(patient);
     } catch (error) {
         next(error);
