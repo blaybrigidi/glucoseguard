@@ -2,16 +2,142 @@
 
 import React, { useState } from 'react';
 import { Button } from './button';
-import {
-    AtSign,
-    ChevronLeft,
-    LayoutGrid,
-    User,
-    Phone
-} from 'lucide-react';
+import { AtSign, ChevronLeft, User, Phone, Lock, Heart, Activity, Shield, Bell } from 'lucide-react';
 import { Input } from './input';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+
+const highlights = [
+    { icon: Activity, text: 'Live vitals from IoT wearables' },
+    { icon: Shield, text: 'AI-powered anomaly detection' },
+    { icon: Bell,   text: 'Instant critical alerts' },
+    { icon: Heart,  text: 'Built for clinical teams' },
+];
+
+function LeftPanel() {
+    return (
+        <div style={{
+            background: 'linear-gradient(160deg, #1565C0 0%, #0D47A1 60%, #1a237e 100%)',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '48px 44px',
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            {/* Grid overlay */}
+            <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)',
+                backgroundSize: '36px 36px',
+            }} />
+
+            {/* Logo */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <Heart size={18} color="#fff" />
+                </div>
+                <span style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.01em' }}>
+                    GlucoseGuard
+                </span>
+            </div>
+
+            {/* Central visual — pulse monitor mockup */}
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 20,
+                    padding: '28px 32px',
+                    width: '100%',
+                    maxWidth: 340,
+                }}>
+                    {/* Fake patient card header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                        <div style={{
+                            width: 40, height: 40, borderRadius: '50%',
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <User size={18} color="rgba(255,255,255,0.8)" />
+                        </div>
+                        <div>
+                            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.88rem' }}>Patient Monitor</div>
+                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Live — Ward B</div>
+                        </div>
+                        <div style={{
+                            marginLeft: 'auto',
+                            width: 8, height: 8, borderRadius: '50%',
+                            backgroundColor: '#4CAF50',
+                            boxShadow: '0 0 0 3px rgba(76,175,80,0.25)',
+                        }} />
+                    </div>
+
+                    {/* Fake vitals */}
+                    {[
+                        { label: 'Heart Rate', value: '74 bpm', color: '#F48FB1' },
+                        { label: 'SpO₂',       value: '98%',    color: '#90CAF9' },
+                        { label: 'Temperature', value: '36.8°C', color: '#A5D6A7' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '10px 0',
+                            borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>{label}</span>
+                            <span style={{ color, fontWeight: 700, fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                        </div>
+                    ))}
+
+                    {/* Fake pulse line */}
+                    <div style={{ marginTop: 20, position: 'relative', height: 40 }}>
+                        <svg viewBox="0 0 300 40" width="100%" height="40" preserveAspectRatio="none">
+                            <polyline
+                                points="0,20 40,20 55,5 65,35 75,20 120,20 135,8 145,32 155,20 200,20 215,6 225,34 235,20 300,20"
+                                fill="none"
+                                stroke="rgba(144,202,249,0.7)"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Feature highlights */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {highlights.map(({ icon: Icon, text }) => (
+                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 32, height: 32, borderRadius: 8,
+                            backgroundColor: 'rgba(255,255,255,0.12)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                        }}>
+                            <Icon size={15} color="rgba(255,255,255,0.85)" />
+                        </div>
+                        <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', fontWeight: 500 }}>{text}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function fieldError(errors: Record<string, string>, field: string) {
+    if (!errors[field]) return null;
+    return (
+        <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: 4, marginLeft: 2 }}>
+            {errors[field]}
+        </p>
+    );
+}
 
 export function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -19,188 +145,236 @@ export function RegisterPage() {
         email: '',
         phoneNumber: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
     });
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear field error on change
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
     const formatPhoneNumber = (phone: string) => {
-        // Remove all non-digit characters
         const cleaned = phone.replace(/\D/g, '');
-        // If it starts with 1 and is 11 digits, add +
-        if (cleaned.length === 11 && cleaned.startsWith('1')) {
-            return `+${cleaned}`;
-        }
-        // If it is 10 digits, add +1
-        if (cleaned.length === 10) {
-            return `+1${cleaned}`;
-        }
-        // Otherwise return original (or let backend validation fail if invalid)
-        // If user entered + already, it might be fine, but we cleaned it.
-        // Let's handle the case where user typed +1...
-        if (phone.startsWith('+')) {
-            return phone;
-        }
+        if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+        if (cleaned.length === 10) return `+1${cleaned}`;
+        if (phone.startsWith('+')) return phone;
         return `+${cleaned}`;
+    };
+
+    const validate = () => {
+        const next: Record<string, string> = {};
+        if (!formData.displayName.trim()) next.displayName = 'Full name is required.';
+        if (!formData.email.trim()) next.email = 'Email address is required.';
+        const digits = formData.phoneNumber.replace(/\D/g, '');
+        if (!formData.phoneNumber.trim()) {
+            next.phoneNumber = 'Phone number is required.';
+        } else if (digits.length < 10) {
+            next.phoneNumber = 'Phone number must be at least 10 digits (e.g. 0244000000 or +233244000000).';
+        }
+        if (!formData.password) next.password = 'Password is required.';
+        else if (formData.password.length < 6) next.password = 'Password must be at least 6 characters.';
+        if (formData.password !== formData.confirmPassword) next.confirmPassword = 'Passwords do not match.';
+        return next;
+    };
+
+    const parseBackendError = (message: string): Record<string, string> => {
+        const lower = message.toLowerCase();
+        if (lower.includes('phone') || lower.includes('too short') || lower.includes('e.164')) {
+            return { phoneNumber: 'Invalid phone number. Use international format, e.g. +233244000000.' };
+        }
+        if (lower.includes('email already') || lower.includes('email-already')) {
+            return { email: 'An account with this email already exists.' };
+        }
+        if (lower.includes('weak-password') || lower.includes('password')) {
+            return { password: message };
+        }
+        return { form: message };
     };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match');
+        const validationErrors = validate();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
             return;
         }
 
         try {
             setLoading(true);
+            setErrors({});
             const formattedPhone = formatPhoneNumber(formData.phoneNumber);
-            await register(
-                formData.email,
-                formData.password,
-                formData.displayName,
-                formattedPhone
-            );
-            navigate('/');
+            await register(formData.email, formData.password, formData.displayName, formattedPhone);
+            navigate('/app');
         } catch (error: any) {
-            console.error("Registration failed", error);
-            alert("Registration failed: " + error.message);
+            setErrors(parseBackendError(error.message || 'Registration failed. Please try again.'));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
-            <div className="bg-primary text-primary-foreground relative hidden h-full flex-col border-r p-10 lg:flex">
-                <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent" />
-                <div className="z-10 flex items-center gap-2">
-                    <LayoutGrid className="size-6" />
-                    <p className="text-xl font-semibold">DialLog</p>
-                </div>
-                <div className="z-10 mt-auto">
-                    <blockquote className="space-y-2">
-                        <footer className="font-mono text-sm font-semibold">
-                        </footer>
-                    </blockquote>
+        <main style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
+            {/* Left panel — hidden on small screens */}
+            <div style={{ display: 'flex' }} className="hidden lg:flex">
+                <div style={{ width: '100%' }}>
+                    <LeftPanel />
                 </div>
             </div>
-            <div className="relative flex min-h-screen flex-col justify-center p-4">
-                <Button variant="ghost" className="absolute top-7 left-5" asChild>
+
+            {/* Right panel — form */}
+            <div style={{
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                padding: '48px 48px',
+                backgroundColor: '#F5F5F5',
+                overflowY: 'auto',
+            }}>
+                <Button variant="ghost" style={{ alignSelf: 'flex-start', marginBottom: 24, marginLeft: -8 }} asChild>
                     <Link to="/">
-                        <ChevronLeft className='size-4 me-2' />
+                        <ChevronLeft className="size-4 me-2" />
                         Back to Home
                     </Link>
                 </Button>
-                <div className="mx-auto space-y-4 sm:w-[400px]">
-                    <div className="flex items-center gap-2 lg:hidden">
-                        <LayoutGrid className="size-6" />
-                        <p className="text-xl font-semibold">DialLog</p>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                        <h1 className="font-heading text-2xl font-bold tracking-wide">
-                            Create Account
-                        </h1>
-                        <p className="text-muted-foreground text-base">
-                            Join the DialLog Health Portal
-                        </p>
+
+                <div style={{ maxWidth: 400, width: '100%', margin: '0 auto' }}>
+                    {/* Mobile logo */}
+                    <div className="flex items-center gap-2 lg:hidden mb-6">
+                        <Heart size={20} color="#1565C0" />
+                        <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>GlucoseGuard</span>
                     </div>
 
-                    <form className="space-y-4" onSubmit={handleRegister}>
-                        <div className="relative h-max">
-                            <Input
-                                placeholder="Full Name"
-                                className="peer ps-9"
-                                type="text"
-                                name="displayName"
-                                value={formData.displayName}
-                                onChange={handleChange}
-                                required
-                            />
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <User className="size-4" aria-hidden="true" />
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 6 }}>
+                        Create an account
+                    </h1>
+                    <p style={{ color: '#757575', fontSize: '0.9rem', marginBottom: 28 }}>
+                        Join the GlucoseGuard clinical portal
+                    </p>
+
+                    {errors.form && (
+                        <div style={{
+                            padding: '12px 16px', borderRadius: 8,
+                            backgroundColor: '#FEF2F2', border: '1px solid #FECACA',
+                            color: '#DC2626', fontSize: '0.85rem', marginBottom: 20,
+                        }}>
+                            {errors.form}
+                        </div>
+                    )}
+
+                    <form style={{ display: 'flex', flexDirection: 'column', gap: 16 }} onSubmit={handleRegister}>
+                        {/* Full Name */}
+                        <div>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', inset: '0 auto 0 12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <User size={16} color="#9CA3AF" />
+                                </div>
+                                <Input
+                                    placeholder="Full name"
+                                    className="ps-9"
+                                    style={{ borderColor: errors.displayName ? '#EF4444' : undefined }}
+                                    type="text"
+                                    name="displayName"
+                                    value={formData.displayName}
+                                    onChange={handleChange}
+                                />
                             </div>
+                            {fieldError(errors, 'displayName')}
                         </div>
 
-                        <div className="relative h-max">
-                            <Input
-                                placeholder="Phone Number"
-                                className="peer ps-9"
-                                type="tel"
-                                name="phoneNumber"
-                                value={formData.phoneNumber}
-                                onChange={handleChange}
-                                required
-                            />
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <Phone className="size-4" aria-hidden="true" />
+                        {/* Email */}
+                        <div>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', inset: '0 auto 0 12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <AtSign size={16} color="#9CA3AF" />
+                                </div>
+                                <Input
+                                    placeholder="Email address"
+                                    className="ps-9"
+                                    style={{ borderColor: errors.email ? '#EF4444' : undefined }}
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                />
                             </div>
+                            {fieldError(errors, 'email')}
                         </div>
 
-                        <div className="relative h-max">
-                            <Input
-                                placeholder="Email Address"
-                                className="peer ps-9"
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                required
-                            />
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <AtSign className="size-4" aria-hidden="true" />
+                        {/* Phone */}
+                        <div>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', inset: '0 auto 0 12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <Phone size={16} color="#9CA3AF" />
+                                </div>
+                                <Input
+                                    placeholder="Phone number (e.g. +233244000000)"
+                                    className="ps-9"
+                                    style={{ borderColor: errors.phoneNumber ? '#EF4444' : undefined }}
+                                    type="tel"
+                                    name="phoneNumber"
+                                    value={formData.phoneNumber}
+                                    onChange={handleChange}
+                                />
                             </div>
+                            {fieldError(errors, 'phoneNumber')}
                         </div>
 
-                        <div className="relative h-max">
-                            <Input
-                                placeholder="Password"
-                                className="peer ps-9"
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                required
-                            />
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <LayoutGrid className="size-4" aria-hidden="true" />
+                        {/* Password */}
+                        <div>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', inset: '0 auto 0 12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <Lock size={16} color="#9CA3AF" />
+                                </div>
+                                <Input
+                                    placeholder="Password (min. 6 characters)"
+                                    className="ps-9"
+                                    style={{ borderColor: errors.password ? '#EF4444' : undefined }}
+                                    type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                />
                             </div>
+                            {fieldError(errors, 'password')}
                         </div>
 
-                        <div className="relative h-max">
-                            <Input
-                                placeholder="Confirm Password"
-                                className="peer ps-9"
-                                type="password"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                required
-                            />
-                            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <LayoutGrid className="size-4" aria-hidden="true" />
+                        {/* Confirm Password */}
+                        <div>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', inset: '0 auto 0 12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <Lock size={16} color="#9CA3AF" />
+                                </div>
+                                <Input
+                                    placeholder="Confirm password"
+                                    className="ps-9"
+                                    style={{ borderColor: errors.confirmPassword ? '#EF4444' : undefined }}
+                                    type="password"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                />
                             </div>
+                            {fieldError(errors, 'confirmPassword')}
                         </div>
 
-                        <Button type="submit" className="w-full bg-slate-600 hover:bg-slate-700 text-white" disabled={loading}>
-                            <span>{loading ? "Creating Account..." : "Register"}</span>
+                        <Button
+                            type="submit"
+                            style={{ backgroundColor: '#1565C0', color: '#fff', marginTop: 4 }}
+                            className="w-full hover:bg-blue-800"
+                            disabled={loading}
+                        >
+                            {loading ? 'Creating account...' : 'Create account'}
                         </Button>
                     </form>
-                    <p className="text-muted-foreground mt-8 text-sm">
+
+                    <p style={{ color: '#757575', fontSize: '0.85rem', marginTop: 24, textAlign: 'center' }}>
                         Already have an account?{' '}
-                        <Link
-                            to="/login"
-                            className="hover:text-primary underline underline-offset-4"
-                        >
-                            Sign In
+                        <Link to="/login" style={{ color: '#1565C0', fontWeight: 600, textDecoration: 'none' }}>
+                            Sign in
                         </Link>
                     </p>
                 </div>
