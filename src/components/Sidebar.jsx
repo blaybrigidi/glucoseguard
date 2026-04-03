@@ -14,7 +14,7 @@ const Sidebar = ({ onNavigate, currentView = 'dashboard' }) => {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.logoArea}>
-        <h2 style={styles.logoText}>Clinician<span style={{ fontWeight: 'var(--font-weight-regular)' }}>Dash</span></h2>
+        <h2 style={styles.logoText}>Glucose<span style={{ fontWeight: 'var(--font-weight-regular)' }}>Guard</span></h2>
       </div>
       <nav style={styles.nav}>
         <ul style={styles.ul}>
