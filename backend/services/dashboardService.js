@@ -41,15 +41,17 @@ const getPatientName = async (patientId) => {
     return 'Unknown Patient';
 };
 
-const computeStats = async () => {
+const computeStats = async (doctorId) => {
     const now = Date.now();
-    if (cache.stats.data && (now - cache.stats.timestamp < CACHE_TTL.STATS)) {
+    const cacheKey = doctorId || 'global';
+    if (cache.stats.data && cache.stats.key === cacheKey && (now - cache.stats.timestamp < CACHE_TTL.STATS)) {
         return cache.stats.data;
     }
 
     try {
-        const patientsRef = db.collection('users');
-        const snapshot = await patientsRef.get();
+        let query = db.collection('users').where('role', '==', 'patient');
+        if (doctorId) query = query.where('assignedDoctor', '==', doctorId);
+        const snapshot = await query.get();
 
         let critical = 0;
         let warning = 0;
@@ -69,7 +71,7 @@ const computeStats = async () => {
             pendingReports: 5 // Mocked
         };
 
-        cache.stats = { data: stats, timestamp: now };
+        cache.stats = { data: stats, timestamp: now, key: cacheKey };
         return stats;
     } catch (error) {
         console.error("Error computing stats:", error.message);

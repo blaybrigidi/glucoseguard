@@ -1276,7 +1276,7 @@ const OnboardingFlow = () => {
 
   const handleSkip = useCallback(() => {
     markComplete();
-    navigate('/', { replace: true });
+    navigate('/app', { replace: true });
   }, [navigate]);
 
   const handleComplete = useCallback(() => {
@@ -1285,7 +1285,7 @@ const OnboardingFlow = () => {
   }, []);
 
   const handleGoToDashboard = useCallback(() => {
-    navigate('/', { replace: true });
+    navigate('/app', { replace: true });
   }, [navigate]);
 
   // Wrap each step in a fade transition
