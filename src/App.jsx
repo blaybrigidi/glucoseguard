@@ -1,5 +1,5 @@
-import React, { useState, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
 import { AlertsProvider } from './context/AlertsContext';
@@ -8,6 +8,8 @@ import { AuthPage } from './components/ui/auth-page';
 import { RegisterPage } from './components/ui/register-page';
 import AlertMonitor from './components/AlertMonitor';
 import { Toaster } from 'sonner';
+import OnboardingFlow, { isOnboardingComplete } from './components/onboarding/OnboardingFlow';
+import LandingPage from './components/LandingPage';
 
 // Lazy Load Components
 const Sidebar = React.lazy(() => import('./components/Sidebar'));
@@ -26,6 +28,17 @@ const PageLoader = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
   </div>
 );
+// Redirects to /onboarding if the user hasn't completed it yet
+const OnboardingGuard = ({ children }) => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isOnboardingComplete()) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [navigate]);
+  return isOnboardingComplete() ? children : null;
+};
+
 const MainApp = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -73,15 +86,28 @@ function App() {
           <Toaster position="top-right" />
           <AlertMonitor />
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* Onboarding (protected — must be logged in) */}
+            <Route
+              path="/onboarding"
+              element={
+                <RequireAuth>
+                  <OnboardingFlow />
+                </RequireAuth>
+              }
+            />
 
             {/* Protected Routes */}
             <Route
               path="/*"
               element={
                 <RequireAuth>
-                  <MainApp />
+                  <OnboardingGuard>
+                    <MainApp />
+                  </OnboardingGuard>
                 </RequireAuth>
               }
             />
