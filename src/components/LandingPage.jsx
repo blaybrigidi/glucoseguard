@@ -8,7 +8,6 @@ import {
     Zap,
     ArrowRight,
     Heart,
-    Cpu,
 } from 'lucide-react';
 
 const features = [
@@ -42,13 +41,6 @@ const features = [
         title: 'Low-Latency IoT',
         desc: 'Purpose-built for wearable and bedside IoT devices with sub-second data ingestion.',
     },
-];
-
-const stats = [
-    { value: '< 1s', label: 'Data latency' },
-    { value: '99.9%', label: 'Uptime SLA' },
-    { value: '2-model', label: 'AI ensemble' },
-    { value: '24 / 7', label: 'Monitoring' },
 ];
 
 export default function LandingPage() {
@@ -113,20 +105,6 @@ export default function LandingPage() {
                 }} />
 
                 <div style={{ position: 'relative', maxWidth: '760px', margin: '0 auto' }}>
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        backgroundColor: 'rgba(255,255,255,0.12)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '100px',
-                        padding: '6px 16px',
-                        marginBottom: '32px',
-                        color: '#E3F2FD',
-                        fontSize: '0.82rem', fontWeight: 500,
-                    }}>
-                        <Cpu size={13} />
-                        IoT-powered clinical intelligence
-                    </div>
-
                     <h1 style={{
                         fontSize: 'clamp(2.4rem, 6vw, 3.8rem)',
                         fontWeight: 800,
@@ -136,7 +114,7 @@ export default function LandingPage() {
                         marginBottom: '24px',
                     }}>
                         Real-time patient monitoring<br />
-                        <span style={{ color: '#90CAF9' }}>powered by AI</span>
+                        <span style={{ color: '#90CAF9' }}>for every patient</span>
                     </h1>
 
                     <p style={{
@@ -174,35 +152,6 @@ export default function LandingPage() {
                             Sign in to dashboard
                         </Link>
                     </div>
-                </div>
-            </section>
-
-            {/* Stats bar */}
-            <section style={{
-                backgroundColor: '#ffffff',
-                borderBottom: '1px solid #E0E0E0',
-                padding: '0 2rem',
-            }}>
-                <div style={{
-                    maxWidth: '900px', margin: '0 auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '0',
-                }}>
-                    {stats.map((s, i) => (
-                        <div key={i} style={{
-                            padding: '32px 24px',
-                            textAlign: 'center',
-                            borderRight: i < stats.length - 1 ? '1px solid #E0E0E0' : 'none',
-                        }}>
-                            <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#1565C0', letterSpacing: '-0.03em' }}>
-                                {s.value}
-                            </div>
-                            <div style={{ fontSize: '0.82rem', color: '#757575', marginTop: '4px', fontWeight: 500 }}>
-                                {s.label}
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </section>
 

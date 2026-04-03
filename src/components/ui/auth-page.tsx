@@ -14,20 +14,30 @@ import { useNavigate, Link } from 'react-router-dom';
 
 export function AuthPage() {
     const [email, setEmail] = React.useState('');
-    const [password, setPassword] = React.useState(''); // Add password
+    const [password, setPassword] = React.useState('');
     const [loading, setLoading] = React.useState(false);
+    const [error, setError] = React.useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         try {
             setLoading(true);
             await login(email, password);
-            navigate('/');
+            navigate('/app');
         } catch (error: any) {
-            console.error("Login failed", error);
-            alert("Login failed: " + error.message);
+            const code = error?.code || '';
+            if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+                setError('Incorrect email or password.');
+            } else if (code === 'auth/too-many-requests') {
+                setError('Too many attempts. Please wait a moment and try again.');
+            } else if (code === 'auth/invalid-email') {
+                setError('Please enter a valid email address.');
+            } else {
+                setError(error.message || 'Sign in failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -46,23 +56,19 @@ export function AuthPage() {
                 <div className="flex flex-col items-center mb-8">
                     <div className="flex items-center gap-2 mb-4 text-primary">
                         <LayoutGrid className="w-8 h-8" />
-                        <span className="text-2xl font-bold tracking-tight text-gray-900">ClinicianDash</span>
+                        <span className="text-2xl font-bold tracking-tight text-gray-900">GlucoseGuard</span>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Sign In</h1>
                     <p className="text-gray-500 text-sm mt-1">Access your clinician dashboard</p>
                 </div>
 
-                <Button
-                    type="button"
-                    className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 mb-6 py-6 font-medium text-base shadow-sm"
-                >
-                    <GoogleIcon className="w-5 h-5 mr-3" />
-                    Continue with Google
-                </Button>
+                {error && (
+                    <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                        {error}
+                    </div>
+                )}
 
-                <AuthSeparator />
-
-                <form className="space-y-4 mt-6" onSubmit={handleLogin}>
+                <form className="space-y-4" onSubmit={handleLogin}>
                     <div>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -95,8 +101,8 @@ export function AuthPage() {
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full bg-primary hover:bg-blue-700 text-white py-6 text-base font-semibold mt-6 shadow-md transition-all" disabled={loading}>
-                        {loading ? "Signing In..." : "Continue With Email"}
+                    <Button type="submit" className="w-full bg-primary hover:bg-blue-700 text-white py-6 text-base font-semibold mt-2 shadow-md transition-all" disabled={loading}>
+                        {loading ? "Signing In..." : "Sign In"}
                     </Button>
                 </form>
 
