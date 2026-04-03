@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 const { db, rtdb } = require('../config/firebase');
 
 // ─── Data Fetching ────────────────────────────────────────────────────────────
@@ -30,17 +31,18 @@ const fetchVitals24h = async (patientId) => {
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 };
 
-const fetchRecentPredictions = async () => {
+const fetchRecentPredictions = async (patientId) => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const snapshot = await db
         .collection('predictions')
-        .orderBy('created_at', 'desc')
-        .limit(25)
+        .where('patient_id', '==', patientId)
         .get();
 
     return snapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(p => p.created_at >= cutoff);
+        .filter(p => p.created_at >= cutoff)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, 25);
 };
 
 // ─── Statistics ───────────────────────────────────────────────────────────────
@@ -75,7 +77,81 @@ const computeStats = (vitals, predictions) => {
     return { avgHR, avgTemp, instabilityEvents, highestProb };
 };
 
-// ─── PDF Generation ───────────────────────────────────────────────────────────
+// ─── Chart Rendering ──────────────────────────────────────────────────────────
+
+// Render at 2× resolution for crisp embedding in PDF
+const CHART_PX_W = 990;
+const CHART_PX_H = 300;
+
+const chartCanvas = new ChartJSNodeCanvas({
+    width: CHART_PX_W,
+    height: CHART_PX_H,
+    backgroundColour: 'white',
+});
+
+/**
+ * Down-sample vitals to at most `maxPoints` evenly-spaced readings so the
+ * chart labels don't overlap when there are hundreds of readings.
+ */
+const sampleVitals = (vitals, maxPoints = 48) => {
+    if (vitals.length <= maxPoints) return vitals;
+    const step = Math.ceil(vitals.length / maxPoints);
+    return vitals.filter((_, i) => i % step === 0);
+};
+
+const renderLineChart = async (vitals, valueKey, chartLabel, borderColor) => {
+    const sampled = sampleVitals(vitals);
+
+    const labels = sampled.map(r =>
+        new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    );
+
+    const data = sampled.map(r => {
+        const v = parseFloat(r[valueKey]);
+        return Number.isFinite(v) ? v : null;
+    });
+
+    const config = {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: chartLabel,
+                data,
+                borderColor,
+                backgroundColor: borderColor + '22',
+                fill: true,
+                pointRadius: data.length > 24 ? 1 : 3,
+                tension: 0.3,
+                spanGaps: true,
+            }],
+        },
+        options: {
+            responsive: false,
+            animation: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { font: { size: 18 }, color: '#1E293B' },
+                },
+            },
+            scales: {
+                x: {
+                    ticks: { maxTicksLimit: 12, font: { size: 14 }, color: '#64748B' },
+                    grid: { color: '#F1F5F9' },
+                },
+                y: {
+                    ticks: { font: { size: 14 }, color: '#64748B' },
+                    grid: { color: '#F1F5F9' },
+                },
+            },
+        },
+    };
+
+    return chartCanvas.renderToBuffer(config);
+};
+
+// ─── PDF Helpers ──────────────────────────────────────────────────────────────
 
 const BRAND_BLUE = '#2563EB';
 const DARK = '#1E293B';
@@ -95,11 +171,13 @@ const riskColor = (risk) => {
     return GREEN;
 };
 
+// ─── PDF Generation ───────────────────────────────────────────────────────────
+
 const generatePDFBuffer = async (patientId) => {
     const [patient, vitals, predictions] = await Promise.all([
         fetchPatientInfo(patientId),
         fetchVitals24h(patientId),
-        fetchRecentPredictions(),
+        fetchRecentPredictions(patientId),
     ]);
 
     if (!patient) throw new Error(`Patient ${patientId} not found`);
@@ -111,9 +189,20 @@ const generatePDFBuffer = async (patientId) => {
         ? (parseFloat(latestVital.instability_probability) * 100).toFixed(1)
         : '0.0';
 
+    // Render charts before opening the PDF stream (both are async)
+    const [hrChartBuf, tempChartBuf] = await Promise.all([
+        renderLineChart(vitals, 'heart_rate', 'Heart Rate (bpm)', '#2563EB'),
+        renderLineChart(vitals, 'temperature', 'Temperature (°C)', '#DC2626'),
+    ]);
+
+    // Chart display dimensions in PDF points (half of pixel size = 2× crisp)
+    const CHART_PT_W = 495;
+    const CHART_PT_H = 150;
+
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ margin: 50, size: 'A4' });
         const chunks = [];
+        let pageNum = 1;
 
         doc.on('data', chunk => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -132,7 +221,7 @@ const generatePDFBuffer = async (patientId) => {
 
         doc.text(`Generated: ${new Date().toLocaleString()}`, 0, 44, {
             align: 'right',
-            width: pageWidth - 50
+            width: pageWidth - 50,
         });
 
         let y = 90;
@@ -202,13 +291,39 @@ const generatePDFBuffer = async (patientId) => {
 
         y += 76;
 
-        // ── Vitals History Table ─────────────────────────────────────────────────
+        // ── 24h Trend Charts ─────────────────────────────────────────────────────
+        doc.fillColor(DARK).fontSize(14).font('Helvetica-Bold').text('24-Hour Trends', 50, y);
+        y += 20;
+        drawLine(doc, y);
+        y += 12;
+
+        if (vitals.length === 0) {
+            doc.font('Helvetica').fontSize(10).fillColor(MUTED)
+                .text('No vitals data available for chart generation.', 50, y + 8);
+            y += 30;
+        } else {
+            doc.image(hrChartBuf, 50, y, { width: CHART_PT_W, height: CHART_PT_H });
+            y += CHART_PT_H + 16;
+
+            doc.image(tempChartBuf, 50, y, { width: CHART_PT_W, height: CHART_PT_H });
+            y += CHART_PT_H + 16;
+        }
+
+        // ── Footer page 1 then start page 2 ─────────────────────────────────────
+        drawLine(doc, 820, '#CBD5E1');
+        doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+            .text('Confidential Medical Record — GlucoseGuard', 50, 826);
+        doc.text(`Page ${pageNum++}`, 0, 826, { align: 'right', width: pageWidth - 50 });
+
+        // ── Vitals History Table (new page) ──────────────────────────────────────
+        doc.addPage();
+        y = 50;
+
         doc.fillColor(DARK).fontSize(14).font('Helvetica-Bold').text('Vitals History (Last 24h)', 50, y);
         y += 20;
         drawLine(doc, y);
         y += 10;
 
-        // Table header
         const cols = [
             { label: 'Timestamp', x: 50, w: 130 },
             { label: 'HR (bpm)', x: 185, w: 65 },
@@ -225,10 +340,13 @@ const generatePDFBuffer = async (patientId) => {
         });
         y += 20;
 
-        // Table rows
         const displayRows = vitals.slice(-50).reverse(); // most recent first, max 50
         displayRows.forEach((row, idx) => {
             if (y > 760) {
+                drawLine(doc, 820, '#CBD5E1');
+                doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+                    .text('Confidential Medical Record — GlucoseGuard', 50, 826);
+                doc.text(`Page ${pageNum++}`, 0, 826, { align: 'right', width: pageWidth - 50 });
                 doc.addPage();
                 y = 50;
             }
@@ -238,7 +356,7 @@ const generatePDFBuffer = async (patientId) => {
 
             const ts = new Date(row.timestamp).toLocaleString(undefined, {
                 month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+                hour: '2-digit', minute: '2-digit',
             });
 
             const hr = row.heart_rate ?? row.hr ?? '--';
@@ -265,18 +383,13 @@ const generatePDFBuffer = async (patientId) => {
         if (displayRows.length === 0) {
             doc.font('Helvetica').fontSize(10).fillColor(MUTED)
                 .text('No vitals recorded in the last 24 hours.', 50, y + 8);
-            y += 30;
         }
 
-        // ── Footer ───────────────────────────────────────────────────────────────
-        const totalPages = doc.bufferedPageRange().count;
-        for (let i = 0; i < totalPages; i++) {
-            doc.switchToPage(i);
-            drawLine(doc, 820, '#CBD5E1');
-            doc.font('Helvetica').fontSize(8).fillColor(MUTED)
-                .text('Confidential Medical Record — GlucoseGuard', 50, 826);
-            doc.text(`Page ${i + 1} of ${totalPages}`, 0, 826, { align: 'right', width: pageWidth - 50 });
-        }
+        // ── Footer last page ─────────────────────────────────────────────────────
+        drawLine(doc, 820, '#CBD5E1');
+        doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+            .text('Confidential Medical Record — GlucoseGuard', 50, 826);
+        doc.text(`Page ${pageNum}`, 0, 826, { align: 'right', width: pageWidth - 50 });
 
         doc.end();
     });

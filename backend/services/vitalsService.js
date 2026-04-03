@@ -54,7 +54,7 @@ const logVitalSign = async (data) => {
 
         // Single write to patient document
         if (Object.keys(updateData).length > 1) { // Ensure there's more than just updatedAt if configKey was null (though configKey checks exist)
-            await db.collection('patients').doc(patientId).update(updateData);
+            await db.collection('users').doc(patientId).update(updateData);
         }
 
         return { success: true, ...vitalEntry };

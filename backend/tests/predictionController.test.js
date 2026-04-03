@@ -24,6 +24,9 @@ function validatePredictionBody(body) {
     if (!body.latest_reading || typeof body.latest_reading !== 'string') {
         return 'Invalid prediction payload: latest_reading is required (ISO string)';
     }
+    if (!body.patient_id || typeof body.patient_id !== 'string') {
+        return 'Invalid prediction payload: patient_id is required (string)';
+    }
     return null;
 }
 
@@ -38,7 +41,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: 0.72,
             is_anomaly: true,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(validPayload)).toBeNull();
     });
@@ -49,7 +53,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: 0.11,
             is_anomaly: false,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toBeNull();
     });
@@ -74,7 +79,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: 0.5,
             is_anomaly: true,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/prediction must be 0 or 1/);
     });
@@ -85,7 +91,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: 0.5,
             is_anomaly: true,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/prediction must be 0 or 1/);
     });
@@ -98,7 +105,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             prediction: 1,
             is_anomaly: true,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/anomaly_probability must be a number/);
     });
@@ -109,7 +117,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: '0.72',
             is_anomaly: true,
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/anomaly_probability must be a number/);
     });
@@ -123,7 +132,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             anomaly_probability: 0.72,
             is_anomaly: 'true',
             earliest_reading: '2026-03-16T09:00:00Z',
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/is_anomaly must be a boolean/);
     });
@@ -136,7 +146,8 @@ describe('validatePredictionBody — Unit Tests', () => {
             prediction: 1,
             anomaly_probability: 0.72,
             is_anomaly: true,
-            latest_reading: '2026-03-16T10:00:00Z'
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/earliest_reading is required/);
     });
@@ -146,8 +157,35 @@ describe('validatePredictionBody — Unit Tests', () => {
             prediction: 1,
             anomaly_probability: 0.72,
             is_anomaly: true,
-            earliest_reading: '2026-03-16T09:00:00Z'
+            earliest_reading: '2026-03-16T09:00:00Z',
+            patient_id: 'patient-abc-123'
         };
         expect(validatePredictionBody(payload)).toMatch(/latest_reading is required/);
+    });
+
+    // ----------------------------------------------------------------
+    // patient_id field
+    // ----------------------------------------------------------------
+    test('UT-P12: returns error when patient_id is missing', () => {
+        const payload = {
+            prediction: 1,
+            anomaly_probability: 0.72,
+            is_anomaly: true,
+            earliest_reading: '2026-03-16T09:00:00Z',
+            latest_reading: '2026-03-16T10:00:00Z'
+        };
+        expect(validatePredictionBody(payload)).toMatch(/patient_id is required/);
+    });
+
+    test('UT-P13: returns error when patient_id is not a string', () => {
+        const payload = {
+            prediction: 1,
+            anomaly_probability: 0.72,
+            is_anomaly: true,
+            earliest_reading: '2026-03-16T09:00:00Z',
+            latest_reading: '2026-03-16T10:00:00Z',
+            patient_id: 42
+        };
+        expect(validatePredictionBody(payload)).toMatch(/patient_id is required/);
     });
 });

@@ -16,6 +16,7 @@ const savePrediction = async (body) => {
         lstm_probability: body.lstm_probability ?? null,
         confidence: body.confidence ?? null,
         is_anomaly: body.is_anomaly,
+        patient_id: body.patient_id,
         earliest_reading: body.earliest_reading, // ISO string; Firestore stores as string or Timestamp
         latest_reading: body.latest_reading,
         created_at: new Date().toISOString(),

@@ -49,7 +49,7 @@ const checkAndCreateAlert = async (patientId, type, value) => {
             console.log(`[Alert] Created ${alertType} alert for patient ${patientId}: ${message}`);
 
             const status = alertType === 'critical' ? 'Critical' : 'Warning';
-            await db.collection('patients').doc(patientId).update({ status });
+            await db.collection('users').doc(patientId).update({ status });
 
             return { id: newAlertRef.key, ...alertData, newStatus: status };
         } catch (error) {
