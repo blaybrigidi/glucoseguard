@@ -1,4 +1,5 @@
 const { db, rtdb } = require('../config/firebase');
+const { getAcceptedPatientIds } = require('./patientService');
 
 // Simple in-memory cache
 const cache = {
@@ -50,7 +51,11 @@ const computeStats = async (doctorId) => {
 
     try {
         let query = db.collection('users').where('role', '==', 'patient');
-        if (doctorId) query = query.where('assignedDoctor', '==', doctorId);
+        if (doctorId) {
+            query = query
+                .where('assignedDoctor', '==', doctorId)
+                .where('assignmentStatus', '==', 'accepted');
+        }
         const snapshot = await query.get();
 
         let critical = 0;
@@ -85,14 +90,17 @@ const computeStats = async (doctorId) => {
     }
 };
 
-const fetchActivityLog = async () => {
+const fetchActivityLog = async (doctorId) => {
     const now = Date.now();
-    if (cache.activity.data && (now - cache.activity.timestamp < CACHE_TTL.ACTIVITY)) {
+    const cacheKey = doctorId || 'global';
+    if (cache.activity.data && cache.activity.key === cacheKey && (now - cache.activity.timestamp < CACHE_TTL.ACTIVITY)) {
         console.log('Serving activity from cache');
         return cache.activity.data;
     }
 
     try {
+        const acceptedIds = doctorId ? new Set(await getAcceptedPatientIds(doctorId)) : null;
+
         const snapshot = await rtdb.ref('alerts').once('value');
         if (!snapshot.exists()) return [];
 
@@ -100,6 +108,7 @@ const fetchActivityLog = async () => {
         const data = snapshot.val();
 
         Object.keys(data).forEach(patientId => {
+            if (acceptedIds && !acceptedIds.has(patientId)) return;
             const patientAlerts = data[patientId];
             Object.keys(patientAlerts).forEach(alertId => {
                 allAlerts.push({ id: alertId, patientId, ...patientAlerts[alertId] });
@@ -110,7 +119,7 @@ const fetchActivityLog = async () => {
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, 10);
 
-        cache.activity = { data: sorted, timestamp: now };
+        cache.activity = { data: sorted, timestamp: now, key: cacheKey };
         return sorted;
     } catch (error) {
         console.error("Error fetching activity log from RTDB:", error.message);
@@ -118,8 +127,11 @@ const fetchActivityLog = async () => {
     }
 };
 
-const fetchUnreadAlerts = async () => {
+const fetchUnreadAlerts = async (doctorId) => {
     try {
+        // Only return alerts for patients fully accepted by this doctor
+        const acceptedIds = doctorId ? new Set(await getAcceptedPatientIds(doctorId)) : null;
+
         const snapshot = await rtdb.ref('alerts').once('value');
         if (!snapshot.exists()) return [];
 
@@ -128,6 +140,7 @@ const fetchUnreadAlerts = async () => {
 
         // Flatten
         Object.keys(data).forEach(patientId => {
+            if (acceptedIds && !acceptedIds.has(patientId)) return;
             const patientAlerts = data[patientId];
             Object.keys(patientAlerts).forEach(alertId => {
                 const alert = patientAlerts[alertId];

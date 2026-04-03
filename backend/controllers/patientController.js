@@ -1,5 +1,10 @@
 const patientService = require('../services/patientService');
 
+// @desc    Assign an existing patient account to the logged-in doctor
+// @route   POST /api/patients
+// @access  Protected (doctor)
+
+
 // @desc    Get all patients
 // @route   GET /api/patients
 // @access  Public
@@ -17,20 +22,17 @@ const getPatients = async (req, res, next) => {
     }
 };
 
-// @desc    Register a new patient
-// @route   POST /api/patients
-// @access  Public
 const createPatient = async (req, res, next) => {
     try {
-        // Basic validation
-        if (!req.body.firstName || !req.body.lastName) {
-            res.status(400);
-            throw new Error('Please include first and last name');
+        const { email, dateOfBirth } = req.body;
+        if (!email || !dateOfBirth) {
+            return res.status(400).json({ error: 'Email and date of birth are required.' });
         }
 
-        const patient = await patientService.createPatient(req.body, req.user.uid);
-        res.status(201).json(patient);
+        const patient = await patientService.assignPatient({ email, dateOfBirth }, req.user.uid);
+        res.status(200).json(patient);
     } catch (error) {
+        if (error.status) return res.status(error.status).json({ error: error.message });
         next(error);
     }
 };

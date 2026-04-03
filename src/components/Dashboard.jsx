@@ -3,6 +3,7 @@ import SummaryCard from './SummaryCard';
 import AlertsDropdown from './AlertsDropdown';
 import PatientList from './PatientList';
 import RecentActivity from './RecentActivity';
+import AssignPatientModal from './AssignPatientModal';
 import { api } from '../services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Search } from 'lucide-react';
 const Dashboard = ({ onNavigate }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [showAssignModal, setShowAssignModal] = useState(false);
     const [dashboardStats, setDashboardStats] = useState({
         criticalAlerts: 0,
         warnings: 0,
@@ -82,7 +84,7 @@ const Dashboard = ({ onNavigate }) => {
                     <AlertsDropdown />
                     <Button
                         className="rounded-full px-8 py-6 text-md font-medium shadow-lg hover:shadow-xl transition-all"
-                        onClick={() => {/* no-op for demo */ }}
+                        onClick={() => setShowAssignModal(true)}
                     >
                         + New Patient
                     </Button>
@@ -145,6 +147,13 @@ const Dashboard = ({ onNavigate }) => {
                     <RecentActivity onNavigate={onNavigate} />
                 </div>
             </div>
+
+            {showAssignModal && (
+                <AssignPatientModal
+                    onClose={() => setShowAssignModal(false)}
+                    onAssigned={() => setShowAssignModal(false)}
+                />
+            )}
         </main>
     );
 };

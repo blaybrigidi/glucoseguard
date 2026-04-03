@@ -9,29 +9,72 @@ const findAllPatients = async (filters) => {
         const snapshot = await query.get();
         if (snapshot.empty) return [];
 
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const visible = ['pending', 'accepted'];
+        return snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(p => visible.includes(p.assignmentStatus));
     } catch (error) {
         console.error("Error getting patients:", error);
         throw new Error('Database Error: Could not get patients');
     }
 };
 
-const createPatient = async (patientData, doctorId) => {
+const getAcceptedPatientIds = async (doctorId) => {
     try {
-        const newPatient = {
-            ...patientData,
-            name: `${patientData.firstName} ${patientData.lastName}`.trim(),
-            role: 'patient',
-            assignedDoctor: doctorId,
-            createdAt: new Date().toISOString(),
-            status: patientData.status || 'Normal'
-        };
-
-        const res = await db.collection('users').add(newPatient);
-        return { id: res.id, ...newPatient };
+        const snapshot = await db.collection('users')
+            .where('role', '==', 'patient')
+            .where('assignedDoctor', '==', doctorId)
+            .where('assignmentStatus', '==', 'accepted')
+            .get();
+        return snapshot.docs.map(doc => doc.id);
     } catch (error) {
-        throw new Error('Database Error: Could not create patient');
+        console.error("Error getting accepted patient IDs:", error);
+        return [];
     }
+};
+
+const assignPatient = async ({ email, dateOfBirth }, doctorId) => {
+    const snapshot = await db.collection('users')
+        .where('email', '==', email.trim().toLowerCase())
+        .where('role', '==', 'patient')
+        .limit(1)
+        .get();
+
+    if (snapshot.empty) {
+        const err = new Error('No patient account found with that email. The patient must sign up on the mobile app first.');
+        err.status = 404;
+        throw err;
+    }
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+
+    if (data.dateOfBirth !== dateOfBirth) {
+        const err = new Error('Date of birth does not match our records.');
+        err.status = 400;
+        throw err;
+    }
+
+    if (data.assignmentStatus === 'accepted' && data.assignedDoctor !== doctorId) {
+        const err = new Error('This patient is already assigned to another doctor.');
+        err.status = 409;
+        throw err;
+    }
+
+    // Already pending or accepted for this same doctor — idempotent
+    if (data.assignedDoctor === doctorId && ['pending', 'accepted'].includes(data.assignmentStatus)) {
+        return { id: doc.id, ...data };
+    }
+
+    // revoked or rejected — allowed to re-request
+
+    await doc.ref.update({
+        assignedDoctor: doctorId,
+        assignmentStatus: 'pending',
+        updatedAt: new Date().toISOString(),
+    });
+
+    return { id: doc.id, ...data, assignedDoctor: doctorId, assignmentStatus: 'pending' };
 };
 
 const findPatientById = async (id) => {
@@ -75,7 +118,8 @@ const deletePatient = async (id) => {
 
 module.exports = {
     findAllPatients,
-    createPatient,
+    getAcceptedPatientIds,
+    assignPatient,
     findPatientById,
     updatePatient,
     deletePatient
