@@ -90,8 +90,8 @@ const createPredictionAlert = async (patientId, predictionData) => {
 
         console.log(`[Alert] Created prediction alert for patient ${patientId}: ${pct}% anomaly probability`);
 
-        const pushBody = `Glucose instability detected — ${pct}% probability (${alertData.confidence ?? 'unknown'} confidence)`;
-        await sendPushToPatient(patientId, '⚠️ GlucoseGuard Alert', pushBody, {
+        const pushBody = `Glucose instability risk detected. Please check your blood glucose manually.`;
+        await sendPushToPatient(patientId, 'GlucoseGuard Alert', pushBody, {
             alertType: 'prediction',
             anomaly_probability: String(probability),
         });
