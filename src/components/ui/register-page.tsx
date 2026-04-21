@@ -210,7 +210,7 @@ export function RegisterPage() {
             setErrors({});
             const formattedPhone = formatPhoneNumber(formData.phoneNumber);
             await register(formData.email, formData.password, formData.displayName, formattedPhone);
-            navigate('/app');
+            navigate('/onboarding');
         } catch (error: any) {
             setErrors(parseBackendError(error.message || 'Registration failed. Please try again.'));
         } finally {
