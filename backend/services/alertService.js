@@ -1,4 +1,5 @@
 const { db, rtdb } = require('../config/firebase');
+const { sendPushToPatient } = require('./fcmService');
 
 const THRESHOLDS = {
     HEART_RATE: { min: 60, max: 100 },
@@ -51,6 +52,9 @@ const checkAndCreateAlert = async (patientId, type, value) => {
             const status = alertType === 'critical' ? 'Critical' : 'Warning';
             await db.collection('users').doc(patientId).update({ status });
 
+            const pushTitle = alertType === 'critical' ? '🚨 Critical Alert' : '⚠️ Health Warning';
+            await sendPushToPatient(patientId, pushTitle, message, { alertType, category: type });
+
             return { id: newAlertRef.key, ...alertData, newStatus: status };
         } catch (error) {
             console.error("[Alert] Failed to create alert:", error);
@@ -85,6 +89,13 @@ const createPredictionAlert = async (patientId, predictionData) => {
         await newAlertRef.set(alertData);
 
         console.log(`[Alert] Created prediction alert for patient ${patientId}: ${pct}% anomaly probability`);
+
+        const pushBody = `Glucose instability detected — ${pct}% probability (${alertData.confidence ?? 'unknown'} confidence)`;
+        await sendPushToPatient(patientId, '⚠️ GlucoseGuard Alert', pushBody, {
+            alertType: 'prediction',
+            anomaly_probability: String(probability),
+        });
+
         return { id: newAlertRef.key, ...alertData };
     } catch (error) {
         console.error('[Alert] Failed to create prediction alert:', error);
