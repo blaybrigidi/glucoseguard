@@ -73,7 +73,7 @@ const computeStats = async (doctorId) => {
             criticalAlerts: critical,
             warnings: warning,
             activePatients: active,
-            pendingReports: 5 // Mocked
+            pendingReports: 0
         };
 
         cache.stats = { data: stats, timestamp: now, key: cacheKey };
@@ -82,10 +82,10 @@ const computeStats = async (doctorId) => {
         console.error("Error computing stats:", error.message);
         // Fallback mock data for quota exceeded or other errors
         return {
-            criticalAlerts: 2,
-            warnings: 5,
-            activePatients: 12,
-            pendingReports: 4
+            criticalAlerts: 0,
+            warnings: 0,
+            activePatients: 0,
+            pendingReports: 0
         };
     }
 };
