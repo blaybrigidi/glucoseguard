@@ -3,13 +3,18 @@ import { api } from '../services/api';
 
 const AlertsManagement = ({ filter }) => {
     const [alerts, setAlerts] = useState([]);
+    const [predictionAlerts, setPredictionAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchAlerts = async () => {
             try {
-                const data = await api.getAlerts();
-                setAlerts(data);
+                const [rawData, predData] = await Promise.all([
+                    api.getAlerts(),
+                    api.getPredictionAlerts(),
+                ]);
+                setAlerts(rawData);
+                setPredictionAlerts(predData);
             } catch (error) {
                 console.error("Failed to load alerts", error);
             } finally {
@@ -18,7 +23,7 @@ const AlertsManagement = ({ filter }) => {
         };
 
         fetchAlerts();
-        const interval = setInterval(fetchAlerts, 10000); // Poll every 10s
+        const interval = setInterval(fetchAlerts, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -32,7 +37,15 @@ const AlertsManagement = ({ filter }) => {
             setAlerts(prev => prev.filter(alert => alert.id !== id));
         } catch (error) {
             console.error("Failed to resolve alert:", error);
-            // Optionally show toast error
+        }
+    };
+
+    const handleDismissPrediction = async (id, patientId) => {
+        try {
+            await api.resolveAlert(id, patientId);
+            setPredictionAlerts(prev => prev.filter(alert => alert.id !== id));
+        } catch (error) {
+            console.error("Failed to dismiss prediction alert:", error);
         }
     };
 
@@ -75,18 +88,17 @@ const AlertsManagement = ({ filter }) => {
             </header>
 
             <div style={styles.bentoGrid}>
-                {/* Left Panel - Live Alert Feed (60%) */}
+                {/* Panel 1 - Threshold Alert Feed */}
                 <section style={styles.feedPanel}>
-                    <h2 style={styles.panelTitle}>Live Alert Feed</h2>
+                    <h2 style={styles.panelTitle}>Threshold Alerts</h2>
                     <div style={styles.feedList}>
+                        {filteredAlerts.length === 0 && (
+                            <p style={styles.emptyState}>No active threshold alerts.</p>
+                        )}
                         {filteredAlerts.map(alert => (
-                            <div
-                                key={alert.id}
-                                style={styles.alertCard}
-                            >
+                            <div key={alert.id} style={styles.alertCard}>
                                 <div style={styles.cardHeader}>
                                     <div style={styles.patientInfo}>
-                                        {/* Visual Cue */}
                                         <div style={styles.statusIndicator}>
                                             {alert.type === 'critical' && (
                                                 <span className="pulse-dot-critical" style={styles.pulseDotCritical}></span>
@@ -116,7 +128,74 @@ const AlertsManagement = ({ filter }) => {
                     </div>
                 </section>
 
-                {/* Right Panel - Threshold Configuration (40%) */}
+                {/* Panel 2 - ML Prediction Alerts */}
+                <section style={styles.predPanel}>
+                    <h2 style={styles.panelTitle}>
+                        ML Prediction Alerts
+                        <span style={styles.mlBadge}>AI</span>
+                    </h2>
+                    <div style={styles.feedList}>
+                        {predictionAlerts.length === 0 && (
+                            <p style={styles.emptyState}>No active prediction alerts.</p>
+                        )}
+                        {predictionAlerts.map(alert => (
+                            <div key={alert.id} style={styles.predCard}>
+                                <div style={styles.cardHeader}>
+                                    <div style={styles.patientInfo}>
+                                        <span className="pulse-dot-pred" style={styles.pulseDotPred}></span>
+                                        <span style={styles.patientName}>{alert.patient}</span>
+                                        <span style={styles.time}>{alert.time}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDismissPrediction(alert.id, alert.patientId)}
+                                        style={styles.dismissButton}
+                                    >
+                                        Dismiss
+                                    </button>
+                                </div>
+                                <div style={styles.predCardBody}>
+                                    <div style={styles.probRow}>
+                                        <span style={styles.predLabel}>Anomaly Probability</span>
+                                        <span style={{
+                                            ...styles.probBadge,
+                                            backgroundColor: alert.probabilityPct >= 70
+                                                ? 'rgba(220, 38, 38, 0.1)'
+                                                : 'rgba(124, 58, 237, 0.1)',
+                                            color: alert.probabilityPct >= 70 ? '#DC2626' : '#7C3AED',
+                                        }}>
+                                            {alert.probabilityPct}%
+                                        </span>
+                                    </div>
+                                    <div style={styles.probBarTrack}>
+                                        <div style={{
+                                            ...styles.probBarFill,
+                                            width: `${alert.probabilityPct}%`,
+                                            backgroundColor: alert.probabilityPct >= 70 ? '#DC2626' : '#7C3AED',
+                                        }} />
+                                    </div>
+                                    {alert.confidencePct != null && (
+                                        <div style={styles.metaRow}>
+                                            <span style={styles.predLabel}>Model Confidence</span>
+                                            <span style={styles.metaValue}>{alert.confidencePct}%</span>
+                                        </div>
+                                    )}
+                                    {alert.earliest_reading && alert.latest_reading && (
+                                        <div style={styles.metaRow}>
+                                            <span style={styles.predLabel}>Reading Window</span>
+                                            <span style={styles.metaValue}>
+                                                {new Date(alert.earliest_reading).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {' — '}
+                                                {new Date(alert.latest_reading).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Panel 3 - Threshold Configuration */}
                 <section style={styles.configPanel}>
                     <h2 style={styles.panelTitle}>Threshold Configuration</h2>
                     <div style={styles.formContainer}>
@@ -469,14 +548,22 @@ const styles = {
     },
     bentoGrid: {
         display: 'grid',
-        gridTemplateColumns: '1.5fr 1fr', // Roughly 60/40
+        gridTemplateColumns: '1fr 1fr 1fr',
         gap: 'var(--spacing-lg)',
-        height: 'calc(100vh - 200px)', // Occupy remaining height
+        height: 'calc(100vh - 200px)',
         minHeight: '500px',
     },
     feedPanel: {
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--border-color)',
+        borderRadius: 'var(--border-radius)',
+        padding: 'var(--spacing-lg)',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    predPanel: {
+        backgroundColor: 'var(--color-bg-surface)',
+        border: '1px solid rgba(124, 58, 237, 0.2)',
         borderRadius: 'var(--border-radius)',
         padding: 'var(--spacing-lg)',
         display: 'flex',
@@ -496,6 +583,24 @@ const styles = {
         marginBottom: 'var(--spacing-lg)',
         borderBottom: '1px solid var(--border-color)',
         paddingBottom: 'var(--spacing-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
+    mlBadge: {
+        fontSize: '0.65rem',
+        fontWeight: '700',
+        letterSpacing: '0.05em',
+        backgroundColor: 'rgba(124, 58, 237, 0.12)',
+        color: '#7C3AED',
+        padding: '2px 7px',
+        borderRadius: '20px',
+    },
+    emptyState: {
+        fontSize: '0.9rem',
+        color: 'var(--color-text-tertiary)',
+        textAlign: 'center',
+        marginTop: 'var(--spacing-xl)',
     },
     feedList: {
         display: 'flex',
@@ -513,6 +618,75 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
+    },
+    predCard: {
+        padding: 'var(--spacing-lg)',
+        border: '1px solid rgba(124, 58, 237, 0.2)',
+        borderRadius: '12px',
+        backgroundColor: 'rgba(124, 58, 237, 0.03)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+    },
+    predCardBody: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+    },
+    probRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    probBadge: {
+        fontSize: '0.85rem',
+        fontWeight: '700',
+        padding: '2px 10px',
+        borderRadius: '20px',
+    },
+    probBarTrack: {
+        height: '6px',
+        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+        borderRadius: '99px',
+        overflow: 'hidden',
+    },
+    probBarFill: {
+        height: '100%',
+        borderRadius: '99px',
+        transition: 'width 0.4s ease',
+    },
+    metaRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '4px',
+    },
+    predLabel: {
+        fontSize: '0.8rem',
+        color: 'var(--color-text-secondary)',
+    },
+    metaValue: {
+        fontSize: '0.8rem',
+        fontWeight: '600',
+        color: 'var(--color-text-primary)',
+    },
+    pulseDotPred: {
+        width: '10px',
+        height: '10px',
+        backgroundColor: '#7C3AED',
+        borderRadius: '50%',
+        boxShadow: '0 0 0 0 rgba(124, 58, 237, 0.5)',
+        animation: 'pulse-pred 2s infinite',
+        flexShrink: 0,
+    },
+    dismissButton: {
+        background: 'none',
+        border: 'none',
+        color: '#7C3AED',
+        fontSize: '0.8rem',
+        cursor: 'pointer',
+        padding: 0,
+        fontWeight: '500',
     },
     cardHeader: {
         display: 'flex',

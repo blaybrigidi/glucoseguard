@@ -60,7 +60,40 @@ const checkAndCreateAlert = async (patientId, type, value) => {
     return null;
 };
 
+const createPredictionAlert = async (patientId, predictionData) => {
+    try {
+        const probability = predictionData.anomaly_probability ?? 0;
+        const pct = Math.round(probability * 100);
+        const alertData = {
+            patientId,
+            source: 'prediction',
+            type: 'prediction',
+            category: 'GLUCOSE_INSTABILITY',
+            message: `Glucose instability detected: ${pct}% probability`,
+            anomaly_probability: probability,
+            xgboost_probability: predictionData.xgboost_probability ?? null,
+            lstm_probability: predictionData.lstm_probability ?? null,
+            confidence: predictionData.confidence ?? null,
+            earliest_reading: predictionData.earliest_reading ?? null,
+            latest_reading: predictionData.latest_reading ?? null,
+            isRead: false,
+            timestamp: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+        };
+
+        const newAlertRef = rtdb.ref(`alerts/${patientId}`).push();
+        await newAlertRef.set(alertData);
+
+        console.log(`[Alert] Created prediction alert for patient ${patientId}: ${pct}% anomaly probability`);
+        return { id: newAlertRef.key, ...alertData };
+    } catch (error) {
+        console.error('[Alert] Failed to create prediction alert:', error);
+        return null;
+    }
+};
+
 module.exports = {
     checkAndCreateAlert,
+    createPredictionAlert,
     THRESHOLDS
 };

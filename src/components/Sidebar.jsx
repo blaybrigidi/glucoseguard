@@ -1,7 +1,9 @@
 import React from 'react';
 import '../styles/variables.css';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ onNavigate, currentView = 'dashboard' }) => {
+  const { logout } = useAuth();
   const menuItems = [
     { name: 'Dashboard', icon: 'Active', id: 'dashboard' },
     { name: 'Patients', icon: '', id: 'patients' },
@@ -48,6 +50,13 @@ const Sidebar = ({ onNavigate, currentView = 'dashboard' }) => {
           <p style={styles.userName}>Dr. Annor</p>
           <p style={styles.userRole}>Cardiologist</p>
         </div>
+        <button
+          onClick={logout}
+          style={styles.logoutButton}
+          title="Log out"
+        >
+          &#x2192;
+        </button>
       </div>
     </aside>
   );
@@ -141,7 +150,19 @@ const styles = {
   userRole: {
     margin: 0,
     fontSize: '0.8rem',
-    color: 'rgba(255, 255, 255, 0.7)', // White opacity
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  logoutButton: {
+    marginLeft: 'auto',
+    background: 'none',
+    border: 'none',
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: '1.2rem',
+    cursor: 'pointer',
+    padding: '4px 6px',
+    borderRadius: '6px',
+    lineHeight: 1,
+    transition: 'color 0.2s',
   },
 };
 
