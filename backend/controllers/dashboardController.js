@@ -61,10 +61,20 @@ const resolveAlert = async (req, res, next) => {
     }
 };
 
+const getPredictionAlerts = async (req, res, next) => {
+    try {
+        const alerts = await dashboardService.fetchPredictionAlerts(req.user.uid);
+        res.json(alerts);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getRecentActivity,
     getAnalytics,
     getAlerts,
+    getPredictionAlerts,
     resolveAlert
 };

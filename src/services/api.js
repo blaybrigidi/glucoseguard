@@ -211,6 +211,13 @@ export const api = {
         return response.json();
     },
 
+    getPredictionAlerts: async () => {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/dashboard/prediction-alerts`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch prediction alerts');
+        return response.json();
+    },
+
     resolveAlert: async (id, patientId) => {
         const headers = await getAuthHeaders();
         const response = await fetch(`${API_BASE_URL}/dashboard/alerts/${id}/resolve`, {

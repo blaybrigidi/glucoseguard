@@ -312,10 +312,64 @@ const markAlertAsResolved = async (alertId, patientId) => {
     }
 };
 
+const fetchPredictionAlerts = async (doctorId) => {
+    try {
+        const acceptedIds = doctorId ? new Set(await getAcceptedPatientIds(doctorId)) : null;
+
+        const snapshot = await rtdb.ref('alerts').once('value');
+        if (!snapshot.exists()) return [];
+
+        let allAlerts = [];
+        const data = snapshot.val();
+
+        Object.keys(data).forEach(patientId => {
+            if (acceptedIds && !acceptedIds.has(patientId)) return;
+            const patientAlerts = data[patientId];
+            Object.keys(patientAlerts).forEach(alertId => {
+                const alert = patientAlerts[alertId];
+                if (alert.source === 'prediction' && !alert.isRead) {
+                    allAlerts.push({ id: alertId, patientId, ...alert });
+                }
+            });
+        });
+
+        allAlerts = allAlerts
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 20);
+
+        const enriched = await Promise.all(allAlerts.map(async (alert) => {
+            try {
+                const patientName = await getPatientName(alert.patientId);
+                const diffMs = new Date() - new Date(alert.timestamp);
+                const diffMins = Math.floor(diffMs / 60000);
+                let timeString = 'Just now';
+                if (diffMins > 0 && diffMins < 60) timeString = `${diffMins}m ago`;
+                if (diffMins >= 60) timeString = `${Math.floor(diffMins / 60)}h ago`;
+
+                return {
+                    ...alert,
+                    patient: patientName,
+                    time: timeString,
+                    probabilityPct: Math.round((alert.anomaly_probability ?? 0) * 100),
+                    confidencePct: alert.confidence != null ? Math.round(alert.confidence * 100) : null,
+                };
+            } catch (err) {
+                return alert;
+            }
+        }));
+
+        return enriched;
+    } catch (error) {
+        console.error('Error fetching prediction alerts:', error.message);
+        return [];
+    }
+};
+
 module.exports = {
     computeStats,
     fetchActivityLog,
     fetchUnreadAlerts,
+    fetchPredictionAlerts,
     calculateAnalytics,
     markAlertAsResolved
 };

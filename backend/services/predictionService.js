@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const { createPredictionAlert } = require('./alertService');
 
 const PREDICTIONS_COLLECTION = 'predictions';
 
@@ -17,12 +18,17 @@ const savePrediction = async (body) => {
         confidence: body.confidence ?? null,
         is_anomaly: body.is_anomaly,
         patient_id: body.patient_id,
-        earliest_reading: body.earliest_reading, // ISO string; Firestore stores as string or Timestamp
+        earliest_reading: body.earliest_reading,
         latest_reading: body.latest_reading,
         created_at: new Date().toISOString(),
     };
 
     const docRef = await db.collection(PREDICTIONS_COLLECTION).add(row);
+
+    if (body.is_anomaly && body.patient_id) {
+        await createPredictionAlert(body.patient_id, row);
+    }
+
     return { id: docRef.id, ...row };
 };
 
