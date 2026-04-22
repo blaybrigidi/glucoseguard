@@ -6,11 +6,12 @@ const rand = (min, max) => parseFloat((Math.random() * (max - min) + min).toFixe
 
 const simulateReading = async () => {
     try {
-        const heartRate = rand(105, 130);
-        const temp      = rand(37.4, 37.9);
+        const heartRate  = rand(105, 130);
+        const temp       = rand(37.4, 37.9);
         const anomalyScore = rand(0.72, 0.92);
-        const hrv_sdnn  = rand(12, 20);
-        const hrv_rmssd = rand(8, 14);
+        const hrv_sdnn   = rand(12, 20);
+        const hrv_rmssd  = rand(8, 14);
+        const timestamp  = new Date().toISOString(); // shared so both merge into one RTDB entry
 
         console.log(`[SIM] HR=${heartRate} bpm  Temp=${temp}°C  Risk=high_risk  Prob=${anomalyScore}`);
 
@@ -19,6 +20,7 @@ const simulateReading = async () => {
             type: 'HEART_RATE',
             value: heartRate,
             unit: 'bpm',
+            timestamp,
             hrv_sdnn,
             hrv_rmssd,
             is_unstable_prediction: true,
@@ -31,6 +33,7 @@ const simulateReading = async () => {
             type: 'TEMPERATURE',
             value: temp,
             unit: '°C',
+            timestamp,
             is_unstable_prediction: true,
             instability_risk: 'high_risk',
             instability_probability: anomalyScore,

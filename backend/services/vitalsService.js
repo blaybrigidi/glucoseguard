@@ -73,7 +73,7 @@ const fetchVitalHistory = async (patientId, range) => {
         // Note: For large datasets, this should be optimized or paginated
         const snapshot = await rtdb.ref(`patient_data/${patientId}`)
             .orderByKey()
-            .limitToLast(50)
+            .limitToLast(200)
             .once('value');
 
         const data = snapshot.val();
