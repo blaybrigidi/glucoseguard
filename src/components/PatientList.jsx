@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../services/api';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 import {
     Table,
     TableBody,
@@ -16,34 +20,61 @@ import { Clock } from 'lucide-react';
 const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All', activeTab = 'accepted' }) => {
     const [patients, setPatients] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { currentUser } = useAuth();
+    const prevStatusMap = useRef({});
 
     useEffect(() => {
-        const fetchPatients = async () => {
-            try {
-                const response = await api.getPatients();
-                const mappedPatients = response.map(p => ({
-                    id: p.id,
-                    name: p.name || 'Unknown',
+        if (!currentUser?.uid) return;
+
+        const q = query(
+            collection(db, 'users'),
+            where('role', '==', 'patient'),
+            where('assignedDoctor', '==', currentUser.uid)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const mapped = [];
+
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                const status = p.assignmentStatus || 'accepted';
+                const prev = prevStatusMap.current[doc.id];
+
+                // Fire toast the moment a patient flips from pending → accepted
+                if (prev === 'pending' && status === 'accepted') {
+                    const name = p.displayName || p.name || 'A patient';
+                    toast.success(`${name} accepted your request`, {
+                        description: 'They have been moved to your active patients list.',
+                        duration: 6000,
+                    });
+                }
+
+                prevStatusMap.current[doc.id] = status;
+
+                if (!['pending', 'accepted'].includes(status)) return;
+
+                mapped.push({
+                    id: doc.id,
+                    name: p.displayName || p.name || 'Unknown',
                     hr: p.lastVitalsConfig?.heartRate || '--',
                     hrTrend: { dir: 'stable', val: 0 },
                     temp: '--',
                     status: p.status || 'Normal',
-                    assignmentStatus: p.assignmentStatus || 'accepted',
+                    assignmentStatus: status,
                     lastUpdate: p.updatedAt ? new Date(p.updatedAt).getTime() : Date.now(),
-                    avatar: p.name ? p.name.split(' ').map(n => n[0]).join('') : '??'
-                }));
-                setPatients(mappedPatients);
-            } catch (error) {
-                console.error("Error fetching patients:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+                    avatar: (p.displayName || p.name || '??').split(' ').map(n => n[0]).join('').toUpperCase(),
+                });
+            });
 
-        fetchPatients();
-        const interval = setInterval(fetchPatients, 10000);
-        return () => clearInterval(interval);
-    }, []);
+            setPatients(mapped);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error listening to patients:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser?.uid]);
 
     const { acceptedPatients, pendingPatients } = useMemo(() => {
         const accepted = [];
