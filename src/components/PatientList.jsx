@@ -41,6 +41,8 @@ const PatientList = ({ onNavigate, searchQuery = '', statusFilter = 'All', activ
         };
 
         fetchPatients();
+        const interval = setInterval(fetchPatients, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const { acceptedPatients, pendingPatients } = useMemo(() => {

@@ -26,6 +26,8 @@ const Patients = ({ onNavigate }) => {
             } catch (_) {}
         };
         loadCount();
+        const interval = setInterval(loadCount, 10000);
+        return () => clearInterval(interval);
     }, [refreshKey]);
 
     const handlePatientCreated = () => {
