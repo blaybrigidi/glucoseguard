@@ -58,10 +58,8 @@ const VitalHistoryChart = ({ patientId }) => {
     }, [patientId, timeRange]);
 
     const metrics = {
-        hr: { label: 'Heart Rate', color: '#0056b3', unit: 'bpm',
-            domain: ([min, max]) => [Math.floor(min * 0.95), Math.ceil(max * 1.05)] },
-        temp: { label: 'Temperature', color: '#e67300', unit: '°C',
-            domain: ([min, max]) => [parseFloat((min - 0.3).toFixed(1)), parseFloat((max + 0.3).toFixed(1))] },
+        hr: { label: 'Heart Rate', color: '#0056b3', unit: 'bpm', domain: [40, 140] },
+        temp: { label: 'Temperature', color: '#e67300', unit: '°C', domain: [35, 41] },
     };
 
     if (loading && chartData.length === 0) {
