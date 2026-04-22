@@ -3,7 +3,7 @@ import '../styles/variables.css';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ onNavigate, currentView = 'dashboard' }) => {
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
   const menuItems = [
     { name: 'Dashboard', icon: 'Active', id: 'dashboard' },
     { name: 'Patients', icon: '', id: 'patients' },
@@ -47,7 +47,7 @@ const Sidebar = ({ onNavigate, currentView = 'dashboard' }) => {
       <div style={styles.userProfile}>
         <div style={styles.avatar}>DR</div>
         <div style={styles.userInfo}>
-          <p style={styles.userName}>Dr. Annor</p>
+          <p style={styles.userName}>Dr. {currentUser?.displayName ?? 'Clinician'}</p>
           <p style={styles.userRole}>Cardiologist</p>
         </div>
         <button
