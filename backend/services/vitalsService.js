@@ -12,12 +12,15 @@ const logVitalSign = async (data) => {
         // Note: In a real scenario, HRV and predictions would come from the sensor/ML pipeline
         // Here we mock them if not provided to satisfy the schema requirements
         const vitalEntry = {
-            [type.toLowerCase()]: value, // dynamic key: heart_rate, spo2, temperature
+            [type.toLowerCase()]: value, // heart_rate / temperature / spo2
             timestamp: readingTimestamp,
 
-            // Mock ML Fields (Default to stable/normal if not provided)
-            hrv_sdnn: data.hrv_sdnn || (Math.random() * 20 + 40).toFixed(1), // 40-60 ms
-            hrv_rmssd: data.hrv_rmssd || (Math.random() * 30 + 30).toFixed(1), // 30-60 ms
+            // Short-key aliases expected by the Flutter mobile app
+            ...(type === 'HEART_RATE' && { hr: value }),
+            ...(type === 'TEMPERATURE' && { temp: value }),
+
+            hrv_sdnn: data.hrv_sdnn || (Math.random() * 20 + 40).toFixed(1),
+            hrv_rmssd: data.hrv_rmssd || (Math.random() * 30 + 30).toFixed(1),
             is_unstable_prediction: data.is_unstable_prediction || false,
             instability_risk: data.instability_risk || 'stable',
             instability_probability: data.instability_probability || data.anomaly_score || 0.1,
