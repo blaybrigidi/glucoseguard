@@ -2,11 +2,10 @@
 
 **Live app: [glucoseguard.vercel.app](https://glucoseguard.vercel.app)**
 **Backend API: [glucoseguard.onrender.com](https://glucoseguard.onrender.com)**
-**ML Model Service: [modelservice-latest.onrender.com](https://modelservice-latest.onrender.com)**
 
-GlucoseGuard is a real-time health monitoring dashboard built for clinicians managing diabetic patients. It displays live vitals from wearable sensors, surfaces alerts when readings go out of range, and shows predictions from a machine learning model that can flag glucose instability events up to 30 minutes before they happen.
+GlucoseGuard is a real-time health monitoring dashboard built for clinicians managing diabetic patients. It displays live vitals from wearable sensors, surfaces alerts when readings go out of range, and shows prediction alerts from the ML service when a patient is at risk.
 
-This repository contains the **web frontend** (React) and the **Node.js backend** that connects it to Firebase. The Flutter mobile app and the Python ML service live in separate repositories.
+This repository contains the **web frontend** (React) and the **Node.js backend** that connects it to Firebase. The Flutter mobile app and the ML service live in separate repositories.
 
 ---
 
@@ -16,7 +15,7 @@ This repository contains the **web frontend** (React) and the **Node.js backend*
 - Patients sign up on the mobile app and accept the doctor's request
 - A wearable sensor (ESP32 + MAX30102) sends heart rate, temperature, and HRV data every 5 minutes
 - The dashboard shows live readings, an alert feed, and a 24-hour trend chart
-- The ML model runs separately and posts its predictions here; if it flags an anomaly, an alert is created and a push notification is sent to the patient's phone
+- Prediction alerts from the ML service are received and surfaced to the doctor; a push notification is also sent to the patient's phone
 - Doctors can download a PDF report for any patient
 
 ---
@@ -210,16 +209,16 @@ All endpoints are prefixed with `/api`. Routes marked **Protected** require a Fi
 | GET | `/api/dashboard/stats` | Protected | Summary counts (active patients, critical alerts, warnings) |
 | GET | `/api/dashboard/alerts` | Protected | Unread vitals alerts for this doctor's patients |
 | GET | `/api/dashboard/activity` | Protected | Last 10 alert events |
-| GET | `/api/dashboard/analytics` | Protected | 24-hour HR trend and glucose instability stats |
-| GET | `/api/dashboard/prediction-alerts` | Protected | Unread ML prediction alerts |
+| GET | `/api/dashboard/analytics` | Protected | 24-hour HR trend and instability stats |
+| GET | `/api/dashboard/prediction-alerts` | Protected | Unread prediction alerts |
 | PATCH | `/api/dashboard/alerts/:id/resolve` | Protected | Mark an alert as read |
 
-### Predictions (ML service → backend)
+### Predictions
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | POST | `/api/predictions` | Optional secret | Receive a prediction result from the ML service |
 
-For the exact request/response shape for predictions, see [`docs/backend-post-format.md`](docs/backend-post-format.md).
+For the exact request/response shape, see [`docs/backend-post-format.md`](docs/backend-post-format.md).
 
 ### PDF Reports
 | Method | Path | Access | Description |
@@ -236,8 +235,8 @@ The app uses two Firebase databases side by side:
 - `users/{userId}` — doctor and patient profiles, assignment status, last vitals summary
 
 **Realtime Database** — data that updates constantly:
-- `patient_data/{patientId}/{timestamp}` — every sensor reading (HR, temperature, HRV, ML prediction)
-- `alerts/{patientId}/{alertId}` — all alerts (vitals + ML predictions)
+- `patient_data/{patientId}/{timestamp}` — every sensor reading (HR, temperature, HRV)
+- `alerts/{patientId}/{alertId}` — all alerts (vitals + prediction alerts)
 
 ---
 
@@ -251,23 +250,22 @@ The app uses two Firebase databases side by side:
 | `FIREBASE_SERVICE_ACCOUNT_PATH` | Yes* | Path to the key file (alternative to the above) |
 | `FIREBASE_DATABASE_URL` | Yes | Realtime Database URL from Firebase Console |
 | `ALLOWED_ORIGINS` | Yes | Comma-separated list of frontend URLs |
-| `PREDICTIONS_API_SECRET` | No | If set, ML service must send this to POST /api/predictions |
+| `PREDICTIONS_API_SECRET` | No | If set, the predictions endpoint requires this as a Bearer token or X-API-Key |
 
 *One of `FIREBASE_SERVICE_ACCOUNT_JSON` or `FIREBASE_SERVICE_ACCOUNT_PATH` is required.
 
 ---
 
-## Related Components
+## Related Repositories
 
 | Component | Description |
 |---|---|
 | Mobile App | Flutter app for patients — sign up, accept doctor requests, receive push alerts |
-| ML Service | Python service running the XGBoost + LSTM ensemble, posts predictions to `/api/predictions` |
+| ML Service | Prediction service hosted at [modelservice-latest.onrender.com](https://modelservice-latest.onrender.com) — covered in its own repository |
 
 ---
 
 ## Documentation
 
 - [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) — step-by-step guide for doctors using the dashboard
-- [`docs/backend-post-format.md`](docs/backend-post-format.md) — API contract for the ML service integration
-- [`ML_WebApp_Integration_Guide.md`](ML_WebApp_Integration_Guide.md) — full write-up on how the ML model works and how it connects to this app
+- [`docs/backend-post-format.md`](docs/backend-post-format.md) — API contract between the ML service and this backend

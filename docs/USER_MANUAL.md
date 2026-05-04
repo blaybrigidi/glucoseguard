@@ -195,29 +195,21 @@ Click **Settings** in the sidebar to manage your account preferences. From here 
 
 ---
 
-## 9. Understanding the ML Predictions
+## 9. Understanding Prediction Alerts
 
-The glucose instability predictions come from a separate machine learning model that runs in the background. Here is what you need to know to interpret them correctly.
-
-### What the model does
-
-The model looks at 60 minutes of a patient's heart rate, skin temperature, and heart rate variability (HRV). It uses patterns in those readings to predict whether the patient's blood glucose is likely to change rapidly in the **next 30 minutes**.
-
-It does **not** measure glucose directly — it detects early warning signs in the vital signs that tend to precede a glucose event.
+Prediction alerts are sent by the ML service when it detects a risk of glucose instability. The ML service runs separately — full details on how it works are covered in the ML repository.
 
 ### What the numbers mean
 
-- **Anomaly probability** (0–100%) — the model's confidence that an instability event is coming. Higher means more confident.
+- **Anomaly probability** (0–100%) — the model's confidence that something is wrong. Higher means more confident.
 - **Instability risk** — a three-level label: `stable`, `warning`, or `high_risk`
-- **XGBoost / LSTM probability** — the individual model scores that were combined to produce the final probability
 
 ### Important caveats
 
-- The model catches about 80% of real instability events — which means it misses roughly 1 in 5
-- When it does alert, it is correct about 1 in 3 times. The other 2 are false alarms. This is intentional: a false alarm is better than a missed real event
+- Not every prediction alert represents a real event — some are false alarms. This is intentional: a false alarm is better than a missed real event
 - **This tool is not a substitute for clinical judgment.** Use it as an early warning signal, not a diagnosis
 
-### What to do when you see a glucose alert
+### What to do when you see a prediction alert
 
 1. Check the patient's recent vitals on their detail page
 2. Contact the patient and ask them to check their blood glucose manually
