@@ -1,5 +1,8 @@
 const { admin, db } = require('../config/firebase');
 
+// Creates a new Firebase auth account and saves a doctor profile in Firestore.
+// Everyone who registers through the web app is a doctor — patients sign up
+// via the mobile app instead.
 const registerUser = async ({ email, password, phoneNumber, displayName }) => {
     try {
         const userRecord = await admin.auth().createUser({
@@ -13,7 +16,6 @@ const registerUser = async ({ email, password, phoneNumber, displayName }) => {
 
         console.log('Successfully created new user:', userRecord.uid);
 
-        // RBAC Implementation: Every Web App registration is a Doctor
         await db.collection('users').doc(userRecord.uid).set({
             role: 'doctor',
             email: userRecord.email,
@@ -30,9 +32,8 @@ const registerUser = async ({ email, password, phoneNumber, displayName }) => {
     }
 };
 
-// NOTE: Admin SDK cannot sign in users with email/password.
-// For the backend to verify a user, the Frontend should sign in using the Client SDK
-// and send the ID Token to the backend for verification.
+// The server-side Firebase SDK can't sign users in directly — that's a client job.
+// This just confirms that a token the frontend sent us is genuine.
 const verifyToken = async (idToken) => {
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);

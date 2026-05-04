@@ -3,12 +3,9 @@ const { createPredictionAlert } = require('./alertService');
 
 const PREDICTIONS_COLLECTION = 'predictions';
 
-/**
- * Save a single prediction from the ML service to Firestore.
- * One record per POST (e.g. one reading every 5 minutes).
- * @param {Object} body - Validated payload from POST body
- * @returns {Object} Saved record with id and created_at
- */
+// Receives a result from the ML service and saves it to Firestore.
+// If the model flagged it as an anomaly, we also fire an alert so the
+// patient and their doctor get notified straight away.
 const savePrediction = async (body) => {
     const row = {
         prediction: body.prediction,

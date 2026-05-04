@@ -1,19 +1,18 @@
+// Entry point for the backend — sets up Express, connects Firebase,
+// registers all API routes, and starts listening for requests.
+
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-// const connectDB = require('./config/db'); // Uncomment when DB is configured
 
-// Load environment variables
 dotenv.config();
 
-// Firebase Admin initialization happens in config/firebase.js (imported when needed by services)
-// or we can import it here to ensure it starts early:
+// Boot Firebase early so it's ready before any request comes in
 require('./config/firebase');
 
 const app = express();
 
-
-// Middleware
+// Only allow requests from known frontend origins (configured in .env for production)
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
     : ['http://localhost:5173', 'http://localhost:3000'];
@@ -22,9 +21,8 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true,
 }));
-app.use(express.json()); // Body parser
+app.use(express.json());
 
-// Route Imports
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const vitalsRoutes = require('./routes/vitalsRoutes');
@@ -32,7 +30,6 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const predictionRoutes = require('./routes/predictionRoutes');
 const pdfRoutes = require('./routes/pdfRoutes');
 
-// Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/vitals', vitalsRoutes);
@@ -40,12 +37,12 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/predictions', predictionRoutes);
 app.use('/api/pdf', pdfRoutes);
 
-// Base Route
 app.get('/', (req, res) => {
     res.send('IoT Healthcare API is running...');
 });
 
-// Error Handling Middleware
+// Central error handler — any route can call next(error) and it lands here.
+// We hide the stack trace in production so we don't leak internals.
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({

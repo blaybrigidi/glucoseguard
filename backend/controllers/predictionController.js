@@ -1,9 +1,8 @@
 const predictionService = require('../services/predictionService');
 
-/**
- * Validate prediction payload shape from the ML service.
- * Required: prediction (0|1), anomaly_probability, is_anomaly, earliest_reading, latest_reading.
- */
+// Makes sure the data coming from the ML service has everything we need
+// before we try to save it. The ML service runs separately and sends results
+// via HTTP, so we can't trust the shape blindly.
 function validatePredictionBody(body) {
     if (body == null || typeof body !== 'object') {
         return 'Invalid prediction payload: body must be an object';

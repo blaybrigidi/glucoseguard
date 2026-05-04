@@ -1,3 +1,7 @@
+// Dev tool — pretends to be a physical sensor by sending fake vitals every 5 seconds.
+// All readings are intentionally abnormal so alerts and the live chart are easy to test
+// without needing real hardware. Change PATIENT_ID to whichever test patient you want to use.
+
 const { logVitalSign } = require('./services/vitalsService');
 
 const PATIENT_ID = "C40QIC4KuFRPQXF1ezsBuYTmdRg2";
@@ -6,12 +10,14 @@ const rand = (min, max) => parseFloat((Math.random() * (max - min) + min).toFixe
 
 const simulateReading = async () => {
     try {
-        const heartRate  = rand(105, 130);
-        const temp       = rand(37.4, 37.9);
+        const heartRate    = rand(105, 130);   // above normal to trigger alerts
+        const temp         = rand(37.4, 37.9); // slightly elevated
         const anomalyScore = rand(0.72, 0.92);
-        const hrv_sdnn   = rand(12, 20);
-        const hrv_rmssd  = rand(8, 14);
-        const timestamp  = new Date().toISOString(); // shared so both merge into one RTDB entry
+        const hrv_sdnn     = rand(12, 20);
+        const hrv_rmssd    = rand(8, 14);
+
+        // Both readings share a timestamp so they merge into a single RTDB entry
+        const timestamp = new Date().toISOString();
 
         console.log(`[SIM] HR=${heartRate} bpm  Temp=${temp}°C  Risk=high_risk  Prob=${anomalyScore}`);
 

@@ -1,5 +1,8 @@
 const { db } = require('../config/firebase');
 
+// Returns all patients linked to a specific doctor.
+// We only show patients whose assignment is pending or accepted —
+// rejected/revoked ones are hidden from the list.
 const findAllPatients = async (filters) => {
     try {
         let query = db.collection('users')
@@ -19,6 +22,7 @@ const findAllPatients = async (filters) => {
     }
 };
 
+// Used by the dashboard to know which patients this doctor can see live data for
 const getAcceptedPatientIds = async (doctorId) => {
     try {
         const snapshot = await db.collection('users')
@@ -33,6 +37,9 @@ const getAcceptedPatientIds = async (doctorId) => {
     }
 };
 
+// Links a patient to a doctor. The doctor provides the patient's email and date of birth
+// as a simple identity check before the request is sent.
+// The patient still needs to accept the request on their mobile app before it's fully active.
 const assignPatient = async ({ email, dateOfBirth }, doctorId) => {
     const snapshot = await db.collection('users')
         .where('email', '==', email.trim().toLowerCase())
@@ -61,13 +68,12 @@ const assignPatient = async ({ email, dateOfBirth }, doctorId) => {
         throw err;
     }
 
-    // Already pending or accepted for this same doctor — idempotent
+    // Request already exists for this doctor — nothing to do, just return what we have
     if (data.assignedDoctor === doctorId && ['pending', 'accepted'].includes(data.assignmentStatus)) {
         return { id: doc.id, ...data };
     }
 
-    // revoked or rejected — allowed to re-request
-
+    // If a previous request was revoked or rejected, this creates a fresh one
     await doc.ref.update({
         assignedDoctor: doctorId,
         assignmentStatus: 'pending',

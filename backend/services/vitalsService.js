@@ -1,24 +1,26 @@
 const { db, rtdb } = require('../config/firebase');
 const { checkAndCreateAlert } = require('./alertService');
 
+// Saves one vital sign reading coming from a sensor or the simulator.
+// It writes to two places:
+//   - Realtime Database (for the live chart on the dashboard)
+//   - Firestore (to keep the patient list's "last vitals" summary up to date)
+// After saving it also checks whether the value warrants an alert.
 const logVitalSign = async (data) => {
     try {
         const { patientId, type, value, unit, timestamp, deviceId } = data;
 
-        // Ensure valid timestamp
         const readingTimestamp = timestamp || new Date().toISOString();
 
-        // Construct the full data object matching ML Guide schema
-        // Note: In a real scenario, HRV and predictions would come from the sensor/ML pipeline
-        // Here we mock them if not provided to satisfy the schema requirements
         const vitalEntry = {
-            [type.toLowerCase()]: value, // heart_rate / temperature / spo2
+            [type.toLowerCase()]: value, // e.g. heart_rate, temperature
             timestamp: readingTimestamp,
 
-            // Short-key aliases expected by the Flutter mobile app
+            // The Flutter mobile app expects these shorter field names
             ...(type === 'HEART_RATE' && { hr: value }),
             ...(type === 'TEMPERATURE' && { temp: value }),
 
+            // HRV values come from the sensor; we fill in random plausibles if not provided
             hrv_sdnn: data.hrv_sdnn || (Math.random() * 20 + 40).toFixed(1),
             hrv_rmssd: data.hrv_rmssd || (Math.random() * 30 + 30).toFixed(1),
             is_unstable_prediction: data.is_unstable_prediction || false,
@@ -32,31 +34,22 @@ const logVitalSign = async (data) => {
             }
         };
 
-        // Write to Realtime Database: patient_data/{patientId}/{timestamp}
-        // Using 'update' to merge with existing data at this timestamp if multiple sensors report separately
+        // Using update (not set) so HR and temperature readings at the same timestamp
+        // get merged into a single entry rather than overwriting each other
         await rtdb.ref(`patient_data/${patientId}/${readingTimestamp.replace(/\./g, '_')}`).update(vitalEntry);
 
-        // Also update Firestore 'patients' collection for the "Last Vitals" summary on dashboard
-        // This keeps the relational view (Patient List) fast without querying RTDB history
+        // Keep track of which Firestore field to update for this reading type
         let configKey = null;
         if (type === 'HEART_RATE') configKey = 'lastVitalsConfig.heartRate';
         if (type === 'SPO2') configKey = 'lastVitalsConfig.spO2';
         if (type === 'TEMPERATURE') configKey = 'lastVitalsConfig.temperature';
 
-        // Check for alerts (Business Logic)
         await checkAndCreateAlert(patientId, type, value);
 
-        // Prepare update data
-        const updateData = {
-            updatedAt: new Date().toISOString()
-        };
+        const updateData = { updatedAt: new Date().toISOString() };
+        if (configKey) updateData[configKey] = value;
 
-        if (configKey) {
-            updateData[configKey] = value;
-        }
-
-        // Single write to patient document
-        if (Object.keys(updateData).length > 1) { // Ensure there's more than just updatedAt if configKey was null (though configKey checks exist)
+        if (Object.keys(updateData).length > 1) {
             await db.collection('users').doc(patientId).update(updateData);
         }
 
@@ -67,10 +60,10 @@ const logVitalSign = async (data) => {
     }
 };
 
+// Grabs the last 200 readings for a patient from the Realtime Database.
+// The chart uses this to render the history view.
 const fetchVitalHistory = async (patientId, range) => {
     try {
-        // RTDB Query
-        // Note: For large datasets, this should be optimized or paginated
         const snapshot = await rtdb.ref(`patient_data/${patientId}`)
             .orderByKey()
             .limitToLast(200)
@@ -79,9 +72,9 @@ const fetchVitalHistory = async (patientId, range) => {
         const data = snapshot.val();
         if (!data) return [];
 
-        // Convert object to array
+        // RTDB keys can't contain dots, so we swapped them for underscores on write — swap back here
         return Object.entries(data).map(([key, value]) => ({
-            timestamp: key.replace(/_/g, '.'), // Revert any key sanitization if needed
+            timestamp: key.replace(/_/g, '.'),
             ...value
         }));
     } catch (error) {

@@ -1,9 +1,10 @@
 const { admin, db } = require('../config/firebase');
 
-/**
- * Send a push notification to a patient by looking up their FCM token
- * stored at users/{patientId}/fcmToken in Firestore.
- */
+// Sends a push notification to a patient's phone.
+// The patient's FCM token (a device identifier) is stored in their Firestore profile
+// when they log in on the mobile app. We look it up here and use it to target the message.
+// If the token is stale (they uninstalled/reinstalled the app), we clear it so we don't
+// keep trying to send to a dead address.
 const sendPushToPatient = async (patientId, title, body, data = {}) => {
     try {
         const userDoc = await db.collection('users').doc(patientId).get();
@@ -23,6 +24,7 @@ const sendPushToPatient = async (patientId, title, body, data = {}) => {
             token: fcmToken,
             notification: { title, body },
             data: {
+                // FCM requires all extra data values to be strings
                 ...Object.fromEntries(
                     Object.entries(data).map(([k, v]) => [k, String(v)])
                 ),

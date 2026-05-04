@@ -1,17 +1,17 @@
 const { db, rtdb } = require('../config/firebase');
 const { sendPushToPatient } = require('./fcmService');
 
+// Normal ranges for heart rate and body temperature.
+// Readings outside these trigger alerts.
 const THRESHOLDS = {
     HEART_RATE: { min: 60, max: 100 },
     TEMPERATURE: { min: 36.0, max: 37.5 }
 };
 
-/**
- * Checks if a vital sign reading is abnormal and creates an alert if so.
- * @param {string} patientId 
- * @param {string} type - 'HEART_RATE', 'TEMPERATURE'
- * @param {number} value 
- */
+// Called every time a new vital reading comes in.
+// Compares the value against the thresholds above, and if something's off
+// it saves an alert to the Realtime Database, updates the patient's status
+// in Firestore, and fires a push notification to their phone.
 const checkAndCreateAlert = async (patientId, type, value) => {
     let alertType = null;
     let message = null;
@@ -41,7 +41,7 @@ const checkAndCreateAlert = async (patientId, type, value) => {
                 value,
                 isRead: false,
                 timestamp: new Date().toISOString(),
-                createdAt: new Date().toISOString() 
+                createdAt: new Date().toISOString()
             };
 
             const newAlertRef = rtdb.ref(`alerts/${patientId}`).push();
@@ -64,6 +64,9 @@ const checkAndCreateAlert = async (patientId, type, value) => {
     return null;
 };
 
+// Triggered when the ML model flags a glucose instability anomaly.
+// Stores the prediction alert alongside regular vitals alerts so the
+// dashboard and mobile app can surface it the same way.
 const createPredictionAlert = async (patientId, predictionData) => {
     try {
         const probability = predictionData.anomaly_probability ?? 0;
