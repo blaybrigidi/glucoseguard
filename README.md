@@ -1,5 +1,7 @@
 # GlucoseGuard — Web Dashboard
 
+**Live app: [glucoseguard.vercel.app](https://glucoseguard.vercel.app)**
+
 GlucoseGuard is a real-time health monitoring dashboard built for clinicians managing diabetic patients. It displays live vitals from wearable sensors, surfaces alerts when readings go out of range, and shows predictions from a machine learning model that can flag glucose instability events up to 30 minutes before they happen.
 
 This repository contains the **web frontend** (React) and the **Node.js backend** that connects it to Firebase. The Flutter mobile app and the Python ML service live in separate repositories.
