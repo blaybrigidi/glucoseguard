@@ -5,14 +5,14 @@ import { getDatabase } from 'firebase/database';
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBE5ow4mI_GGYl-0c1HvQcxAXsQgZdLQhM",
-    authDomain: "diallog-78c08.firebaseapp.com",
-    projectId: "diallog-78c08",
-    storageBucket: "diallog-78c08.firebasestorage.app",
-    messagingSenderId: "218458882617",
-    appId: "1:218458882617:web:8af364666537f1ed00c3e8",
-    measurementId: "G-D3T4FKHHPY",
-    databaseURL: "https://diallog-78c08-default-rtdb.europe-west1.firebasedatabase.app"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
 
 const app = initializeApp(firebaseConfig);
