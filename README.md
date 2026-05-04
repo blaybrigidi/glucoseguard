@@ -60,7 +60,7 @@ CapstoneWebApp/
 │   ├── services/         # Business logic (alerts, vitals, PDF, etc.)
 │   ├── routes/           # Express route definitions
 │   ├── middleware/        # Auth token verification
-│   └── simulate_sensor.js  # Dev tool — fakes sensor data
+│   
 ├── docs/                 # Additional documentation
 └── package.json          # Frontend dependencies
 ```
