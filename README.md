@@ -1,6 +1,8 @@
 # GlucoseGuard — Web Dashboard
 
 **Live app: [glucoseguard.vercel.app](https://glucoseguard.vercel.app)**
+**Backend API: [glucoseguard.onrender.com](https://glucoseguard.onrender.com)**
+**ML Model Service: [modelservice-latest.onrender.com](https://modelservice-latest.onrender.com)**
 
 GlucoseGuard is a real-time health monitoring dashboard built for clinicians managing diabetic patients. It displays live vitals from wearable sensors, surfaces alerts when readings go out of range, and shows predictions from a machine learning model that can flag glucose instability events up to 30 minutes before they happen.
 
